@@ -6,7 +6,8 @@ param (
     [string]$vmNewName,
     [Parameter(Mandatory=$true)]
     [string]$rgName,
-    [string]$newLocation #Optional, moves the VM to a new Geographic Location
+    [string]$newLocation, #Optional, moves the VM to a new Geographic Location
+    [string]$newSubnetId #Optional, moves the VM to a new Subnet
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,7 +30,14 @@ if ($SourceVmPowerStatus -ne "VM deallocated") {
 $NewVmObject = New-AzVMConfig -VMName $vmNewName -VMSize $SourceVmObject.HardwareProfile.VmSize 
 
 Write-Host "Create new Network Objects"
-$subnetID = (Get-AzNetworkInterface -ResourceId $SourceVmObject.NetworkProfile.NetworkInterfaces[0].id).IpConfigurations.Subnet.id
+if ([string]::IsNullOrEmpty($newSubnetId)) {    
+    $subnetID = (Get-AzNetworkInterface -ResourceId $SourceVmObject.NetworkProfile.NetworkInterfaces[0].id).IpConfigurations.Subnet.id
+    Write-Host "No new Subnet specified, using the current VM's existing subnet: $subnetID"
+} else {
+    $subnetID = $newSubnetId
+    Write-Host "new Subnet specified, $subnetID"
+}
+
 
 $nic = New-AzNetworkInterface -Name "$($vmNewName.ToLower())-0-nic" -ResourceGroupName $SourceVmObject.ResourceGroupName  -Location $SourceVmObject.Location -SubnetId $SubnetId 
 

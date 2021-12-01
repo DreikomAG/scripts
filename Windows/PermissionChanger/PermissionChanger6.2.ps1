@@ -68,7 +68,7 @@ if ($confirmation) {
                     $ACL = Get-Acl $Dir -ErrorAction Stop 
                     #Set inheritance to no
                     $ACL.SetAccessRuleProtection($true, $false)  
-                    #Set owner to domain-admins
+                    #Set owner to local Admins
                     $ACL.SetOwner([System.Security.Principal.NTAccount]"VORDEFINIERT\Administratoren")
                     #Remove old permissions
                     $ACL.Access | ForEach { [Void]$ACL.RemoveAccessRule($_) }
@@ -97,10 +97,12 @@ if ($confirmation) {
         }
         Catch {
             Write-Host "Could not get AD-Domain" -ForegroundColor Red
+            "Could not get AD-Domain" >> "PermissionChangerLog.txt"
         }
     }
 }
 else {
     Write-Host "`n PermissionChanger cancelled`n" -ForegroundColor Yellow
+    "PermissionChanger cancelled" >> "PermissionChangerLog.txt"
     Pause
 }
