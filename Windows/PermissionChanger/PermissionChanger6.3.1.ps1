@@ -9,7 +9,7 @@
         [Parameter(Mandatory = $false)]
         [string[]]$Paths = $null
     )
-    $Version = "PermissionChanger6.3"
+    $Version = "PermissionChanger6.3.1"
 
     Write-Host "`nStarting $Version DREIKOM AG by Raphael Büchi " (Get-Date).ToString("dd/MM/yyyy HH:mm:ss")"`n" -ForegroundColor Yellow
     Write-Host "This Programm will setup user-specific permission on home or profile folders`n"
@@ -81,7 +81,7 @@
                     $AdUser = Get-ADUser $User -erroraction Stop
                     Write-Host (Get-Date).ToString("HH:mm:ss") " $( $User ): permission changed $( $Dir.Fullname )" -ForegroundColor Green
                     (Get-Date).ToString("dd/MM/yyyy HH:mm:ss") + " $( $User ): permission changed $( $Dir.Fullname )" >> "PermissionChangerLog.txt"
-                    $ACL = Get-Acl $Dir -ErrorAction Stop
+                    $ACL = New-Object System.Security.AccessControl.DirectorySecurity
                     #Set inheritance to no
                     $ACL.SetAccessRuleProtection($true, $false)
                     #Set owner to local Admins
@@ -102,7 +102,7 @@
                     Write-Host (Get-Date).ToString("HH:mm:ss") " $( $User ): not found $( $Dir.Fullname )" -ForegroundColor Red
                     (Get-Date).ToString("dd/MM/yyyy HH:mm:ss") + " $( $User ): not found $( $Dir.Fullname )" >> "PermissionChangerLog.txt"
 
-                    $ACL = Get-Acl $Dir -ErrorAction Stop
+                    $ACL = New-Object System.Security.AccessControl.DirectorySecurity
                     #Set inheritance to no
                     $ACL.SetAccessRuleProtection($true, $false)
                     #Set owner to local Admins
