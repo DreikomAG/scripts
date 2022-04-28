@@ -1,25 +1,15 @@
-<# CIAOPS
-Script provided as is. Use at own risk. No guarantees or warranty provided.
-Description - Report and potentially disable interactive logins to shared mailboxes
-## Source - https://github.com/directorcia/Office365/blob/master/o365-exo-sharedblock.ps1
-Prerequisites = 2
-1. Connected to Exchange Online
-2. Connect to Azure AD
-More scripts available by joining http://www.ciaopspatron.com
-#>
 
-## Variables
-$secure = $false         ## $true = shared mailbox login will be automatically disabled, $false = report only
-$systemmessagecolor = "cyan"
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $false)]
+        [switch]$secure ## $true = shared mailbox login will be automatically disabled, $false = report only
+    )
+
 $processmessagecolor = "green"
 $errormessagecolor = "red"
 
-## If you have running scripts that don't have a certificate, run this command once to disable that level of security
-## set-executionpolicy -executionpolicy bypass -scope currentuser -force
-
-Clear-Host
-
-write-host -foregroundcolor $systemmessagecolor "Script started`n"
+Connect-ExchangeOnline
+Connect-AzureAD
 
 write-host -ForegroundColor $processmessagecolor "Getting shared mailboxes"
 $Mailboxes = Get-Mailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited
@@ -39,5 +29,3 @@ foreach ($mailbox in $mailboxes) {
     }
 }
 write-host -ForegroundColor $processmessagecolor "`nFinish checking mailboxes"
-write-host
-write-host -foregroundcolor $systemmessagecolor "Script completed`n"
