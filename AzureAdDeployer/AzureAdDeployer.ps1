@@ -30,8 +30,31 @@ function installEXO {
         Write-Host "Installing PowerShell ExchangeOnline Module"
         Install-Module -Name ExchangeOnlineManagement -Scope CurrentUser -Force
     }
-
 }
+
+function installGraph {
+    if (Get-Module -Name Microsoft.Graph -ListAvailable) {
+        Write-Host "Updating PowerShell Graph SDK Module"
+        Update-Module -Name Microsoft.Graph -Scope CurrentUser -Force
+    }
+
+    if (-not (Get-Module -Name Microsoft.Graph -ListAvailable)) {
+        Write-Host "Installing PowerShell Graph SDK Module"
+        Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force
+    }
+}
+
+# function installAzureAd {
+#     if (Get-Module -Name AzureAD -ListAvailable) {
+#         Write-Host "Updating PowerShell AzureAD Module"
+#         Update-Module -Name AzureAD -Scope CurrentUser -Force
+#     }
+
+#     if (-not (Get-Module -Name AzureAD -ListAvailable)) {
+#         Write-Host "Installing PowerShell AzureAD Module"
+#         Install-Module -Name AzureAD -Scope CurrentUser -Force
+#     }
+# }
 
 function connectExo {
     if ($UseExistingExoSession) { return }
@@ -81,6 +104,8 @@ function setSharedMailboxEnableCopyToSent {
 if ($Install) {
     Write-Host "Installing prerequisite"
     installEXO
+    installGraph
+    # installAzureAd
     return
 }
 
