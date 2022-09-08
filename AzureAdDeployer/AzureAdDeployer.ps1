@@ -167,7 +167,7 @@ function connectExo {
     if ($UseExistingExoSession) { return }
     if (-not $script:ExoConnected) {
         Write-Host "Connecting to EXO"
-        Connect-ExchangeOnline -ShowBanner:$false
+        Connect-ExchangeOnline -ShowBanner:$false -Device
     }
     $script:ExoConnected = $true
 }
@@ -213,7 +213,7 @@ function checkSharedMailboxLogin {
 
 function checkSharedMailboxReport {
     param(
-        [switch]$Fix
+        [System.Boolean]$Fix
     )
     $MailboxReport = @()
     foreach ($Mailbox in getSharedMailboxes) {
@@ -231,7 +231,7 @@ function checkSharedMailboxReport {
 
 function checkMailboxReport {
     param(
-        [switch]$Fix
+        [System.Boolean]$Fix
     )
     $Mailboxes = Get-EXOMailbox -ResultSize:Unlimited
     if ($Fix) {
