@@ -167,7 +167,8 @@ function connectExo {
     if ($UseExistingExoSession) { return }
     if (-not $script:ExoConnected) {
         Write-Host "Connecting to EXO"
-        Connect-ExchangeOnline -ShowBanner:$false -Device
+        # Connect-ExchangeOnline -ShowBanner:$false -Device
+        Connect-ExchangeOnline -ShowBanner:$false
     }
     $script:ExoConnected = $true
 }
