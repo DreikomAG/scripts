@@ -1,17 +1,21 @@
-#CSS codes
+# Maintainer: https://github.com/swissbuechi
 [CmdletBinding()]
 Param(
     [switch]$Install,
     [switch]$UseExistingExoSession,   
     [switch]$CheckExo,  
     [switch]$FixExo,
+    [switch]$UseExistingGraphSession,
     [switch]$CheckAad,
     [switch]$FixAad
 )
 $Version = "1.0.0"
 $script:ExoConnected = $false
+$script:GraphConnected = $false
 
 Write-Host "AzureAdDeployer Version " $Version
+
+$Desktop = [Environment]::GetFolderPath("Desktop")
 
 $ReportTitle = "AzureAdDeployer Report"
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
@@ -55,13 +59,13 @@ function installGraph {
 # }
 
 function connectGraph {
-    # if ($UseExistingExoSession) { return }
-    # if (-not $script:ExoConnected) {
-    Write-Host "Connecting to Graph"
-    Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
+    if ($UseExistingGraphSession) { return }
+    if (-not $script:GraphConnected) {
+        Write-Host "Connecting to Graph"
+        Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
      User.Read.All, User.ReadWrite.All, Directory.Read.All, Directory.ReadWrite.All"
-    # }
-    # $script:ExoConnected = $true
+    }
+    $script:GraphConnected = $true
 }
 
 function checkSecurityDefaults {
@@ -75,8 +79,6 @@ function updateSecurityDefaults {
     }
     Update-MgPolicyIdentitySecurityDefaultEnforcementPolicy -BodyParameter $params
 }
-
-# updateSecurityDefaults -enable $false
 
 function getBreakGlassAccount {
     $bgAccount = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id
@@ -122,7 +124,6 @@ function createConditionalAccessPolicy {
                     "All"
                 )
                 ExcludeUsers = @(
-                    "GuestsOrExternalUsers"
                     getBreakGlassAccount
                 )
             }
@@ -145,6 +146,23 @@ function createConditionalAccessPolicy {
     New-MgIdentityConditionalAccessPolicy -BodyParameter $params
 }
 
+function disableUserAccount {
+    param (
+        $UserId
+    )
+    $params = @{
+        AccountEnabled = "false"
+    }
+    Update-MgUser -UserId $UserId -BodyParameter $params
+}
+
+function checkUserAccountStatus {
+    param(
+        $UserId
+    )
+    return (Get-MgUser -UserId $UserId -Property AccountEnabled).AccountEnabled
+}
+
 function connectExo {
     if ($UseExistingExoSession) { return }
     if (-not $script:ExoConnected) {
@@ -163,31 +181,78 @@ function disconnectExo {
     $script:ExoConnected = $false
 }
 
-function checkMailboxLang {
-    connectExo
-    Write-Host "Generating User Mailbox Language Report"
-    return Get-EXOMailbox -ResultSize:Unlimited | Get-MailboxRegionalConfiguration | ConvertTo-HTML -As Table -Property Identity, Language, TimeZone `
-        -Fragment -PreContent "<h2>User Mailbox Language</h2>"
+function disconnectGraph {
+    if ($UseExistingGraphSession) { return }
+    if ($script:GraphConnected) {
+        Write-Host "Disconnecting to Graph"
+        Disconnect-Graph
+    }
+    $script:GraphConnected = $false
+}
+
+function getSharedMailboxes {
+    return Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
+    UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled
+}
+
+function checkSharedMailboxLogin {
+    param (
+        $Mailbox
+    )
+    $ReginalConfig = $Mailbox | Get-MailboxRegionalConfiguration
+    return [pscustomobject]@{
+        DisplayName                       = $Mailbox.DisplayName
+        UserPrincipalName                 = $Mailbox.UserPrincipalName
+        Language                          = $ReginalConfig.Language
+        TimeZone                          = $ReginalConfig.TimeZone
+        MessageCopyForSentAsEnabled       = $Mailbox.MessageCopyForSentAsEnabled
+        MessageCopyForSendOnBehalfEnabled = $Mailbox.MessageCopyForSendOnBehalfEnabled
+        LoginAllowed                      = checkUserAccountStatus $Mailbox.UserPrincipalName
+    }
+}
+
+function checkSharedMailboxReport {
+    param(
+        [switch]$Fix
+    )
+    $MailboxReport = @()
+    foreach ($Mailbox in getSharedMailboxes) {
+        if ($Fix) {
+            setSharedMailboxEnableCopyToSent $Mailbox
+            setMailboxLang $Mailbox
+            disableUserAccount $Mailbox.UserPrincipalName
+        }
+        $MailboxReport += checkSharedMailboxLogin $Mailbox
+    }
+    return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
+    MessageCopyForSendOnBehalfEnabled, LoginAllowed `
+        -Fragment -PreContent "<h3>Shared Mailbox Report</h3>"
+}
+
+function checkMailboxReport {
+    param(
+        [switch]$Fix
+    )
+    $Mailboxes = Get-EXOMailbox -ResultSize:Unlimited
+    if ($Fix) {
+        $Mailboxes | setMailboxLang
+    }
+    return $Mailboxes | Get-MailboxRegionalConfiguration | ConvertTo-HTML -As Table -Property Identity, Language, TimeZone `
+        -Fragment -PreContent "<h3>User Mailbox Report</h3>"
 }
 
 function setMailboxLang {
-    connectExo
-    Write-Host "Set Mailbox Lang CH"
-    Get-EXOMailbox | Set-MailboxRegionalConfiguration -LocalizeDefaultFolderName:$true -Language de-CH -TimeZone "W. Europe Standard Time" 
-}
-
-function checkSharedMailbox {
-    connectExo
-    Write-Host "Checking SharedMailboxes"
-    return Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName, UserPrincipalName, `
-        MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled | ConvertTo-HTML -As Table -Property DisplayName, `
-        UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled -Fragment -PreContent "<h2>Shared Mailbox Overview</h2>"
+    param(
+        $Mailbox
+    )
+    $Mailbox | Set-MailboxRegionalConfiguration -LocalizeDefaultFolderName:$true -Language de-CH -TimeZone "W. Europe Standard Time" 
 }
 
 function setSharedMailboxEnableCopyToSent {
-    connectExo
-    Write-Host "SharedMailbox enable copy to sent folder"
-    Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited | Set-Mailbox -MessageCopyForSentAsEnabled $True -MessageCopyForSendOnBehalfEnabled $True
+    param(
+        $Mailbox
+    )
+    $Mailbox | Set-Mailbox -MessageCopyForSentAsEnabled $True -MessageCopyForSendOnBehalfEnabled $True
 }
 
 if ($Install) {
@@ -198,28 +263,29 @@ if ($Install) {
     return
 }
 
-if ($FixExo) {
-    Write-Host "Set Default Settings"
-    setMailboxLang
-    setSharedMailboxEnableCopyToSent
-}
+connectExo
+connectGraph
 
-if ($CheckExo) {
-    $MailboxLang = checkMailboxLang
-    $SharedMailbox = checkSharedMailbox
-}
-
-if ($script:ExoConnected) {
-    disconnectExo
+if ($CheckExo -or $FixExo) {
+    $MailboxReport = checkMailboxReport -Fix $FixExo
+    $SharedMailboxReport = checkSharedMailboxReport -Fix $FixExo
 }
 
 if ($CheckAad) {
-
+    
 }
 
 if ($FixAad) {
-
+    
 }
+
+# if ($script:ExoConnected) {
+#     disconnectExo
+# }
+
+# if ($script:GraphConnected) {
+#     disconnectGraph
+# }
 
 $Header = @"
 <style>
@@ -238,6 +304,14 @@ h2 {
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
     font-size: 16px;
+    
+}
+
+h3 {
+
+    font-family: Arial, Helvetica, sans-serif;
+    color: #666666;
+    font-size: 12px;
     
 }
 
@@ -291,9 +365,8 @@ tbody tr:nth-child(even) {
 </style>
 "@
 
-$Desktop = [Environment]::GetFolderPath("Desktop")
 
 Write-Host "Generating HTML Report"
-$Report = ConvertTo-HTML -Body "$ReportTitleHtml $MailboxLang $SharedMailbox" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
+$Report = ConvertTo-HTML -Body "$ReportTitleHtml $MailboxReport $SharedMailbox $SharedMailboxReport" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\AzureAdDeployer-Report.html
 Invoke-Item $Desktop\AzureAdDeployer-Report.html
