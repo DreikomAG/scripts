@@ -191,7 +191,9 @@ tbody tr:nth-child(even) {
 </style>
 "@
 
+$Desktop = [Environment]::GetFolderPath("Desktop")
+
 Write-Host "Generating HTML Report"
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $MailboxLang $SharedMailbox" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
-$Report | Out-File .\AzureAdDeployer-Report.html
-Invoke-Item .\AzureAdDeployer-Report.html
+$Report | Out-File $Desktop\AzureAdDeployer-Report.html
+Invoke-Item $Desktop\AzureAdDeployer-Report.html
