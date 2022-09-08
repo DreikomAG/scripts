@@ -1,14 +1,12 @@
 #CSS codes
 [CmdletBinding()]
 Param(
-    [Parameter(Mandatory = $false)]
     [switch]$Install,
-    [Parameter(Mandatory = $false)]
-    [switch]$SetDefault,    
-    [Parameter(Mandatory = $false)]
-    [switch]$UseExistingExoSession
-    # [Parameter(Mandatory = $false)]
-    # [string[]]$Paths = $null
+    [switch]$UseExistingExoSession,   
+    [switch]$CheckExo,  
+    [switch]$FixExo,
+    [switch]$CheckAad,
+    [switch]$FixAad
 )
 $Version = "1.0.0"
 $script:ExoConnected = $false
@@ -55,6 +53,97 @@ function installGraph {
 #         Install-Module -Name AzureAD -Scope CurrentUser -Force
 #     }
 # }
+
+function connectGraph {
+    # if ($UseExistingExoSession) { return }
+    # if (-not $script:ExoConnected) {
+    Write-Host "Connecting to Graph"
+    Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
+     User.Read.All, User.ReadWrite.All, Directory.Read.All, Directory.ReadWrite.All"
+    # }
+    # $script:ExoConnected = $true
+}
+
+function checkSecurityDefaults {
+    return Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy -Property "isEnabled"
+}
+
+function updateSecurityDefaults {
+    param ([System.Boolean]$enable)
+    $params = @{
+        IsEnabled = $enable
+    }
+    Update-MgPolicyIdentitySecurityDefaultEnforcementPolicy -BodyParameter $params
+}
+
+# updateSecurityDefaults -enable $false
+
+function getBreakGlassAccount {
+    $bgAccount = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id
+    if ($bgAccount) { return $bgAccount.Id }
+    return $false
+}
+
+function getConditionalAccessPolicy {
+    return Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName
+}
+
+function deleteConditionalAccessPolicy {
+    param (
+        [Parameter(Mandatory = $true)]
+        $Policies
+    )
+    foreach ($Policy in $Policies) {
+        Remove-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $Policy.Id
+    }
+}
+
+function cleanUpConditionalAccessPolicy {
+    $Policies = getConditionalAccessPolicy
+    deleteConditionalAccessPolicy $Policies
+}
+
+function getNamedLocations {
+    return Get-MgIdentityConditionalAccessNamedLocation -Property Id, DisplayName
+}
+
+function createConditionalAccessPolicy {
+    $params = @{
+        DisplayName   = "Require MFA from all unknown locations"
+        State         = "enabled"
+        Conditions    = @{
+            Applications = @{
+                IncludeApplications = @(
+                    "All"
+                )
+            }
+            Users        = @{
+                IncludeUsers = @(
+                    "All"
+                )
+                ExcludeUsers = @(
+                    "GuestsOrExternalUsers"
+                    getBreakGlassAccount
+                )
+            }
+            Locations    = @{
+                IncludeLocations = @(
+                    "All"
+                )
+                ExcludeLocations = @(
+                    "AllTrusted"
+                )
+            }
+        }
+        GrantControls = @{
+            Operator        = "OR"
+            BuiltInControls = @(
+                "mfa"
+            )
+        }
+    }
+    New-MgIdentityConditionalAccessPolicy -BodyParameter $params
+}
 
 function connectExo {
     if ($UseExistingExoSession) { return }
@@ -109,17 +198,28 @@ if ($Install) {
     return
 }
 
-if ($SetDefault) {
+if ($FixExo) {
     Write-Host "Set Default Settings"
     setMailboxLang
     setSharedMailboxEnableCopyToSent
 }
 
-$MailboxLang = checkMailboxLang
-$SharedMailbox = checkSharedMailbox
+if ($CheckExo) {
+    $MailboxLang = checkMailboxLang
+    $SharedMailbox = checkSharedMailbox
+}
 
-disconnectExo
+if ($script:ExoConnected) {
+    disconnectExo
+}
 
+if ($CheckAad) {
+
+}
+
+if ($FixAad) {
+
+}
 
 $Header = @"
 <style>
