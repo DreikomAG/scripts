@@ -69,7 +69,19 @@ function connectGraph {
 }
 
 function checkSecurityDefaults {
-    return Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy -Property "isEnabled"
+    return (Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy -Property "isEnabled").IsEnabled
+}
+
+function checkSecurityDefaultsReport {
+    param (
+        [System.Boolean]$Fix
+    )
+    if (checkSecurityDefaults) {
+
+        return "<br><h3>Security Defaults enabled</h3>"
+    }
+    #Todo: Enable / Disable Security Defaults
+    return "<br><h3>Security Defaults disabled</h3>"
 }
 
 function updateSecurityDefaults {
@@ -81,15 +93,37 @@ function updateSecurityDefaults {
 }
 
 function getBreakGlassAccount {
-    $bgAccount = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id
-    if ($bgAccount) { return $bgAccount.Id }
-    return $false
+    $bgAccount = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
+    if ($bgAccount) { return $bgAccount }
+}
+
+function checkBreakGlassAccountReport {
+    param (
+        $Fix
+    )
+    if ($BgAccount = getBreakGlassAccount) {
+
+        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, Id -As Table -Fragment -PreContent "<br><h3>BreakGlass Account found</h3>"
+    }
+    #Todo: Create BG Account
+    return "<br><h3>BreakGlass Account not found</h3>"
 }
 
 function getConditionalAccessPolicy {
     return Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName
 }
 
+function checkConditionalAccessPolicyReport {
+    param (
+        $Fix
+    )
+    if ($Policy = getConditionalAccessPolicy) {
+
+        return $Policy | ConvertTo-HTML -Property DisplayName, Id -As Table -Fragment -PreContent "<h3>Conditinal Access Policy found</h3>"
+    }
+    #Todo: Create BG Account
+    return "<br>Conditinal Access Policy not found</h3>"
+}
 function deleteConditionalAccessPolicy {
     param (
         [Parameter(Mandatory = $true)]
@@ -124,7 +158,7 @@ function createConditionalAccessPolicy {
                     "All"
                 )
                 ExcludeUsers = @(
-                    getBreakGlassAccount
+                    getBreakGlassAccount.Id
                 )
             }
             Locations    = @{
@@ -266,19 +300,21 @@ if ($Install) {
 
 connectExo
 connectGraph
+$Report = @()
+
+if ($CheckAad -or $FixAad) {
+    $Report += "<h2>AAD Security Settings</h2>"
+    $Report += checkBreakGlassAccountReport -Fix $FixAad
+    $Report += checkSecurityDefaultsReport -Fix $FixAad
+    $Report += checkConditionalAccessPolicyReport -Fix $FixAad
+}
 
 if ($CheckExo -or $FixExo) {
-    $MailboxReport = checkMailboxReport -Fix $FixExo
-    $SharedMailboxReport = checkSharedMailboxReport -Fix $FixExo
+    $Report += "<h2>EXO Security Settings</h2>"
+    $Report += checkMailboxReport -Fix $FixExo
+    $Report += checkSharedMailboxReport -Fix $FixExo
 }
 
-if ($CheckAad) {
-    
-}
-
-if ($FixAad) {
-    
-}
 
 # if ($script:ExoConnected) {
 #     disconnectExo
@@ -368,6 +404,6 @@ tbody tr:nth-child(even) {
 
 
 Write-Host "Generating HTML Report"
-$Report = ConvertTo-HTML -Body "$ReportTitleHtml $MailboxReport $SharedMailbox $SharedMailboxReport" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
+$Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\AzureAdDeployer-Report.html
 Invoke-Item $Desktop\AzureAdDeployer-Report.html
