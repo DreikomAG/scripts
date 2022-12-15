@@ -1,0 +1,8 @@
+Deutsch(Schweiz) Local Experience Pack
+
+powershell.exe -executionpolicy bypass .\Install-LanguageExperiencePack.ps1
+powershell.exe -executionpolicy bypass .\Install-LanguageExperiencePack.ps1
+
+Run as System
+
+Require Reboot
