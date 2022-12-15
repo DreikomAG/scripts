@@ -1,0 +1,1 @@
+Remove-Item -Path "C:\Program Files\KeePass Password Safe 2\KeePass.config.enforced.xml"
