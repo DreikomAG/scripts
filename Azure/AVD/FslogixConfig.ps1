@@ -1,4 +1,4 @@
-$VhdLocations = "\\pstafslogix02.file.core.windows.net\profileshare01"
+$VhdLocations = "\\<storageaccount>.file.core.windows.net\<share>"
 $RegistryPath = "HKLM:\Software\FSLogix\Profiles"
 
 If (-NOT (Test-Path $RegistryPath)) {
