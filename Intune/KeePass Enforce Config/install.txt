@@ -1,0 +1,3 @@
+powershell.exe -executionpolicy bypass .\install.ps1
+
+powershell.exe -executionpolicy bypass .\uninstall.ps1
