@@ -1,0 +1,9 @@
+msiexec.exe /i UCClient.msi /q CTISERVER=ctiserver.mydomain.de OUTLOOKADDIN=0 SKIPCONDITIONS=1
+
+msiexec.exe /x UCClient.msi /q
+
+
+%programfiles%\Mitel\BusinessCTI\
+ECtiClient.exe
+File
+No

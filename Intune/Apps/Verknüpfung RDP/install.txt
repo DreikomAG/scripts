@@ -1,0 +1,9 @@
+https://tech.nicolonsky.ch/intune-create-desktop-shortcut/#examples
+
+%windir%\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass -file "IntuneRdpShortcut.ps1" -ShortcutDisplayName "Test" -RdpTargetServer "dkts01"
+
+%windir%\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass -file "RemoveDesktopIcon.ps1" -ShortcutDisplayName "Test"
+
+User
+
+Custom Detection Script muss bearbeitet werden

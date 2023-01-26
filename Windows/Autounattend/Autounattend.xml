@@ -1,0 +1,292 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+  <settings pass="offlineServicing" />
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="x86" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>de-DE</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>0807:00000807</InputLocale>
+      <SystemLocale>de-CH</SystemLocale>
+      <UILanguage>de-DE</UILanguage>
+      <UserLocale>de-CH</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="arm64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>de-DE</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>0807:00000807</InputLocale>
+      <SystemLocale>de-CH</SystemLocale>
+      <UILanguage>de-DE</UILanguage>
+      <UserLocale>de-CH</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>de-DE</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>0807:00000807</InputLocale>
+      <SystemLocale>de-CH</SystemLocale>
+      <UILanguage>de-DE</UILanguage>
+      <UserLocale>de-CH</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="x86" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ImageInstall>
+        <OSImage>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>3</PartitionID>
+          </InstallTo>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <ProductKey>
+          <Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>
+        </ProductKey>
+        <AcceptEula>true</AcceptEula>
+      </UserData>
+      <RunSynchronous>
+        <RunSynchronousCommand>
+          <Order>1</Order>
+          <Path>cmd.exe /c echo SELECT DISK=0 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>2</Order>
+          <Path>cmd.exe /c echo CLEAN &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>3</Order>
+          <Path>cmd.exe /c echo CONVERT GPT &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>4</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION EFI SIZE=600 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>5</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=FAT32 LABEL="System" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>6</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION MSR SIZE=16 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>7</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION PRIMARY &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>8</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=NTFS LABEL="Windows" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>9</Order>
+          <Path>cmd.exe /c diskpart /s X:\diskpart.txt &gt;&gt; X:\diskpart.log</Path>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="arm64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ImageInstall>
+        <OSImage>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>3</PartitionID>
+          </InstallTo>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <ProductKey>
+          <Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>
+        </ProductKey>
+        <AcceptEula>true</AcceptEula>
+      </UserData>
+      <RunSynchronous>
+        <RunSynchronousCommand>
+          <Order>1</Order>
+          <Path>cmd.exe /c echo SELECT DISK=0 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>2</Order>
+          <Path>cmd.exe /c echo CLEAN &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>3</Order>
+          <Path>cmd.exe /c echo CONVERT GPT &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>4</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION EFI SIZE=600 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>5</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=FAT32 LABEL="System" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>6</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION MSR SIZE=16 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>7</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION PRIMARY &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>8</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=NTFS LABEL="Windows" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>9</Order>
+          <Path>cmd.exe /c diskpart /s X:\diskpart.txt &gt;&gt; X:\diskpart.log</Path>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ImageInstall>
+        <OSImage>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>3</PartitionID>
+          </InstallTo>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <ProductKey>
+          <Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>
+        </ProductKey>
+        <AcceptEula>true</AcceptEula>
+      </UserData>
+      <RunSynchronous>
+        <RunSynchronousCommand>
+          <Order>1</Order>
+          <Path>cmd.exe /c echo SELECT DISK=0 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>2</Order>
+          <Path>cmd.exe /c echo CLEAN &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>3</Order>
+          <Path>cmd.exe /c echo CONVERT GPT &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>4</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION EFI SIZE=600 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>5</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=FAT32 LABEL="System" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>6</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION MSR SIZE=16 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>7</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION PRIMARY &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>8</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=NTFS LABEL="Windows" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>9</Order>
+          <Path>cmd.exe /c diskpart /s X:\diskpart.txt &gt;&gt; X:\diskpart.log</Path>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+  </settings>
+  <settings pass="generalize" />
+  <settings pass="specialize" />
+  <settings pass="auditSystem" />
+  <settings pass="auditUser" />
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="x86" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>0807:00000807</InputLocale>
+      <SystemLocale>de-CH</SystemLocale>
+      <UILanguage>de-DE</UILanguage>
+      <UserLocale>de-CH</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="arm64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>0807:00000807</InputLocale>
+      <SystemLocale>de-CH</SystemLocale>
+      <UILanguage>de-DE</UILanguage>
+      <UserLocale>de-CH</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>0807:00000807</InputLocale>
+      <SystemLocale>de-CH</SystemLocale>
+      <UILanguage>de-DE</UILanguage>
+      <UserLocale>de-CH</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="x86" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <UserAccounts>
+        <AdministratorPassword>
+          <Value></Value>
+          <PlainText>true</PlainText>
+        </AdministratorPassword>
+      </UserAccounts>
+      <AutoLogon>
+        <Username>Administrator</Username>
+        <Enabled>true</Enabled>
+        <LogonCount>1</LogonCount>
+        <Password>
+          <Value></Value>
+          <PlainText>true</PlainText>
+        </Password>
+      </AutoLogon>
+      <OOBE>
+        <ProtectYourPC>3</ProtectYourPC>
+        <HideEULAPage>true</HideEULAPage>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+      </OOBE>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="arm64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <UserAccounts>
+        <AdministratorPassword>
+          <Value></Value>
+          <PlainText>true</PlainText>
+        </AdministratorPassword>
+      </UserAccounts>
+      <AutoLogon>
+        <Username>Administrator</Username>
+        <Enabled>true</Enabled>
+        <LogonCount>1</LogonCount>
+        <Password>
+          <Value></Value>
+          <PlainText>true</PlainText>
+        </Password>
+      </AutoLogon>
+      <OOBE>
+        <ProtectYourPC>3</ProtectYourPC>
+        <HideEULAPage>true</HideEULAPage>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+      </OOBE>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <UserAccounts>
+        <AdministratorPassword>
+          <Value></Value>
+          <PlainText>true</PlainText>
+        </AdministratorPassword>
+      </UserAccounts>
+      <AutoLogon>
+        <Username>Administrator</Username>
+        <Enabled>true</Enabled>
+        <LogonCount>1</LogonCount>
+        <Password>
+          <Value></Value>
+          <PlainText>true</PlainText>
+        </Password>
+      </AutoLogon>
+      <OOBE>
+        <ProtectYourPC>3</ProtectYourPC>
+        <HideEULAPage>true</HideEULAPage>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+      </OOBE>
+        <LogonCommands>
+        <AsynchronousCommand wcm:action="add">
+        <CommandLine>powershell.exe -NoLogo -ExecutionPolicy unrestricted -File D:\Setup.ps1</CommandLine>
+        <Description>Install HP Image Assistant & update automatically</Description>
+        <Order>1</Order>
+        </AsynchronousCommand>
+        </LogonCommands>
+    </component>
+  </settings>
+</unattend>

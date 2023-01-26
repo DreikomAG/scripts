@@ -1,0 +1,6 @@
+SFViewer_x64_1_8_6.exe -q
+"C:\Program Files (x86)\SnapFormViewer\uninstall.exe" -q
+
+C:\Program Files (x86)
+SnapFormViewer
+Yes

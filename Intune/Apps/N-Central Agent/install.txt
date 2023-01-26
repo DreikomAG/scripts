@@ -1,0 +1,7 @@
+WindowsAgentSetup.exe /s /v" /qn CUSTOMERID=<id> REGISTRATION_TOKEN=<token> CUSTOMERSPECIFIC=1 SERVERPROTOCOL=HTTPS SERVERADDRESS=ncod601.n-able.com SERVERPORT=443"
+powershell.exe -executionpolicy bypass .\uninstall.ps1
+
+C:\Program Files (x86)\N-able Technologies\Windows Agent\bin
+agent.exe
+File
+Yes

@@ -1,0 +1,9 @@
+https://tech.nicolonsky.ch/intune-create-desktop-shortcut/#examples
+
+%windir%\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass -file "CreateDesktopIcon.ps1" -ShortcutTargetPath "cmd" -ShortcutDisplayName "cmd"
+
+%windir%\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass -file "RemoveDesktopIcon.ps1" -ShortcutDisplayName "cmd"
+
+User (Kontect)
+
+Custom Script muss bearbeitet werden

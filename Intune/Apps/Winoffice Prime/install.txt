@@ -1,0 +1,9 @@
+powershell.exe -executionpolicy bypass .\install.ps1
+
+msiexec /x "PrimeClient.msi" /q
+
+
+C:\WinOfficePrime\
+WinofficePrimeStartup.exe
+File
+No

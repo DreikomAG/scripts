@@ -1,0 +1,1 @@
+Powershell.exe -ExecutionPolicy Bypass -Command "C:\SWSetup\SP136558\HPImageAssistant.exe" /Operation:Analyze /Category:All /Selection:All /Action:Install /Silent /ReportFolder:C:\SWSetup\HPIAReport /AutoCleanup

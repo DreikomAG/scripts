@@ -1,0 +1,11 @@
+Install:
+msiexec /i "ComaticKrediScanAppSetup.msi" /q
+
+Uninstall:
+msiexec /x "{8D4E243D-6368-4270-8B45-D1A50D41643A}" /q
+
+
+C:\Program Files (x86)\Comatic AG\Comatic Krediscan
+Comatic.KrediScan.Desktop.UI.exe
+File
+Yes

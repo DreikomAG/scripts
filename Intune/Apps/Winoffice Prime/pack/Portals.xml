@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <Startup>
+    <UpdateURL>https://office.dreikom.ch/WIO_DreikomAG</UpdateURL>
+  </Startup>
+  <Portals>
+    <Portal>
+      <!--WIO_DreikomAG-->
+      <Guid>a066d320-2d64-413c-81ee-271880db9d90</Guid>
+      <DisplayName>WIO_DreikomAG</DisplayName>
+      <ConnectionURL>https://office.dreikom.ch/WIO_DreikomAG</ConnectionURL>
+      <UpdateURL>https://office.dreikom.ch/WIO_DreikomAG</UpdateURL>
+    </Portal>
+  <Portal>
+      <!--WIO_DreikomAG_Test-->
+      <Guid>1d593a8b-3e41-4e39-b6dd-1ea7357a9588</Guid>
+      <DisplayName>WIO_DreikomAG_Test</DisplayName>
+      <ConnectionURL>https://office.dreikom.ch/WIO_DreikomAG_Test</ConnectionURL>
+      <UpdateURL>https://office.dreikom.ch/WIO_DreikomAG_Test</UpdateURL>
+    </Portal>
+
+</Portals>
+</Configuration>

@@ -1,0 +1,7 @@
+%windir%\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass -file "installfonts.ps1"
+%windir%\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass -file "uninstallfont.ps1"
+
+C:\Windows\Fonts\
+<name of Font>
+File
+No

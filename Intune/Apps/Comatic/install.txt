@@ -1,0 +1,7 @@
+ComaticRdpSetup.exe /s /v" /qn "
+powershell.exe -executionpolicy bypass .\uninstall.ps1
+
+C:\Program Files (x86)\Comatic\
+ComaticRdp.exe
+File
+Yes

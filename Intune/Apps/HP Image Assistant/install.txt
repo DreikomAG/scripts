@@ -1,0 +1,9 @@
+hp-hpia.exe /s /e /f “C:\SWSetup”
+Powershell.exe -ExecutionPolicy Bypass -Command Remove-Item "C:\SWSetup\SP136558" -Recurse
+
+Detection Rule (File)
+Path: C:\SWSetup\SP136558\
+File: HPImageAssistant.exe
+File or Folder exists
+Yes
+

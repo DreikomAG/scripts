@@ -1,0 +1,7 @@
+SophosSetup.exe --quiet
+%ProgramFiles%\Sophos\Sophos Endpoint Agent\uninstallcli.exe
+
+%ProgramFiles%\Sophos\Sophos UI
+Sophos UI.exe
+File or folder exists.
+No

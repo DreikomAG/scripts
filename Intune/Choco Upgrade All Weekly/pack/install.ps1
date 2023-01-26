@@ -1,0 +1,1 @@
+﻿C:\ProgramData\chocolatey\choco.exe install choco install choco-upgrade-all-at --params "'/WEEKLY:yes /DAY:SUN /TIME:01:00'" -y

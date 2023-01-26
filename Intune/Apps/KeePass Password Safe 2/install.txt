@@ -1,0 +1,7 @@
+powershell.exe -executionpolicy bypass .\install.ps1
+powershell.exe -executionpolicy bypass .\uninstall.ps1
+
+C:\Program Files\KeePass Password Safe 2\
+KeePass.exe
+File
+No

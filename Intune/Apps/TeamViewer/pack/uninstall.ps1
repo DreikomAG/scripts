@@ -1,0 +1,1 @@
+﻿C:\ProgramData\chocolatey\choco.exe uninstall teamviewer -y
