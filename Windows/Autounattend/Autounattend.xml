@@ -282,9 +282,9 @@
       </OOBE>
         <LogonCommands>
         <AsynchronousCommand wcm:action="add">
-        <CommandLine>powershell.exe -NoLogo -ExecutionPolicy unrestricted -File D:\Setup.ps1</CommandLine>
-        <Description>Install HP Image Assistant & update automatically</Description>
-        <Order>1</Order>
+          <CommandLine>powershell.exe -NoLogo -ExecutionPolicy unrestricted -File D:\Setup.ps1</CommandLine>
+          <Description>Install HP Image Assistant & update automatically</Description>
+          <Order>1</Order>
         </AsynchronousCommand>
         </LogonCommands>
     </component>
