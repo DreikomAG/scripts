@@ -1,9 +1,9 @@
 $Version = "5.1.7"
 $Exe = "hp-hpia-$Version.exe"
-$ExePath "C:\Windows\Temp\$Exe"
+$ExePath = "C:\Windows\Temp\$Exe"
 
 Invoke-WebRequest -Uri "https://hpia.hpcloud.hp.com/downloads/hpia/$Exe" -OutFile $ExePath
 
-$ExePath /s /e /f c:\hpia
+Invoke-Expression "$ExePath /s /e /f C:\Hpia"
 
-Powershell.exe -ExecutionPolicy Bypass -Command "C:\HPIA\HPImageAssistant.exe /Operation:Analyze /Category:All /Selection:All /Action:Install /Silent /ReportFolder:C:\HPIA\HPIAReport /Softpaqdownloadfolder:C:\HPIA\HPIASoftpaqs"
+Invoke-Expression "C:\Hpia\HPImageAssistant.exe /Operation:Analyze /Category:All /Selection:All /Action:Install /Silent /ReportFolder:C:\Hpia\HPIAReport /Softpaqdownloadfolder:C:\Hpia\HPIASoftpaqs"
