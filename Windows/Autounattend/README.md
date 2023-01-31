@@ -6,6 +6,8 @@ Setup.ps1: `C:\Temp\Autounattend.log`
 
 Chocolatey: `C:\ProgramData\chocolatey\logs\chocolatey.log`
 
+HPIA: `C:\Hpia\HPIAReport`
+
 ## Tasks
 
 - Set Registry key for de-CH Language Pack
