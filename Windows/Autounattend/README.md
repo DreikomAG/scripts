@@ -16,6 +16,8 @@ Chocolatey: `C:\ProgramData\chocolatey\logs\chocolatey.log`
 
 - Install Adobe Reader: `choco install adobereader -y`
 
-- Install HP Image Assistant
+- Install Chocolatey auto upgrades at startup: `choco install choco-upgrade-all-at-startup -y`
 
-- Run HP Image Assistant Driver install
+- Install and run HP Image Assistant Driver updates
+
+- Install Windows Updates and reboot
