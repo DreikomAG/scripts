@@ -10,6 +10,14 @@ HPIA: `C:\Hpia\HPIAReport`
 
 ## Tasks
 
+### Autounattend.xml
+
+- Set Language de-CH
+
+- UEFI Partition 600MB
+
+### Setup.ps1
+
 - Set Registry key for de-CH Language Pack
 
 - Import WLAN profile from wifi.txt
