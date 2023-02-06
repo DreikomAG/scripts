@@ -9,5 +9,5 @@ New-ItemProperty -Path $RegistryPath -Name "ClearCacheOnLogoff" -Value 1 -Proper
 New-ItemProperty -Path $RegistryPath -Name "DeleteLocalProfileWhenVHDShouldApply" -Value 1 -PropertyType DWORD -Force
 New-ItemProperty -Path $RegistryPath -Name "PreventLoginWithFailure" -Value 1 -PropertyType DWORD -Force
 New-ItemProperty -Path $RegistryPath -Name "PreventLoginWithTempProfile" -Value 1 -PropertyType DWORD -Force
-New-ItemProperty -Path $RegistryPath -Name "CleanupInvalidSessions" -Value 1 -PropertyType DWORD -Force
+New-ItemProperty -Path $RegistryPath -Name "CleanupInvalidSessions" -Value 0 -PropertyType DWORD -Force
 New-ItemProperty -Path $RegistryPath -Name VHDLocations -Value $VhdLocations -PropertyType STRING -Force
