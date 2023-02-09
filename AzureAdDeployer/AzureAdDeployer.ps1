@@ -118,7 +118,7 @@ function checkBreakGlassAccountReport {
     }
     if ($create) {
         createBreakGlassAccount
-        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account created</h3><p>Check console log for credentials</p>"
+        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account created</h3><p>Check console log for credentials</p>"
     }
     return "<h3>BreakGlass account not found</h3><p>Create account with <code> -CreateBreakGlassAccount </code></p>"
 }
