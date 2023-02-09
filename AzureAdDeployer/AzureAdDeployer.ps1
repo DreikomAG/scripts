@@ -148,7 +148,7 @@ function checkGlobalAdminRole {
 }
 
 function createBreakGlassAccount {
-    Write-Output "Creating BreakGlass account:"
+    Write-Host "Creating BreakGlass account:"
     $Name = -join ((97..122) | Get-Random -Count 64 | % { [char]$_ })
     $DisplayName = "BreakGlass $Name"
     $Domain = (Get-MgDomain -Property id, IsInitial | Where-Object {$_.IsInitial -eq $true}).Id
@@ -162,7 +162,7 @@ function createBreakGlassAccount {
     $DirObject = @{
         "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($BgAccount.id)"
     }
-    New-MgDirectoryRoleMemberByRef -DirectoryRoleId getGlobalAdminRoleId -BodyParameter $DirObject
+    New-MgDirectoryRoleMemberByRef -DirectoryRoleId (getGlobalAdminRoleId) -BodyParameter $DirObject
     $BgAccountDisplay = [pscustomobject]@{
         DisplayName                       = $DisplayName
         UserPrincipalName                 = $UPN
