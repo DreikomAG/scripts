@@ -7,7 +7,9 @@ Param(
     [switch]$UseExistingGraphSession,
     [switch]$KeepGraphSessionAlive,
     [switch]$AddExchangeOnlineReport,
-    [switch]$CreateBreakGlassAccount
+    [switch]$CreateBreakGlassAccount,
+    [switch]$EnableSecurityDefaults,
+    [switch]$DisableSecurityDefaults
 )
 $Version = "1.0.0"
 $script:ExoConnected = $false
@@ -53,7 +55,8 @@ function connectGraph {
     if (-not $script:GraphConnected) {
         Write-Host "Connecting to Graph"
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
-        User.Read.All, User.ReadWrite.All, Directory.Read.All, Directory.ReadWrite.All"
+        User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
+        RoleManagement.ReadWrite.Directory"
     }
     $script:GraphConnected = $true
 }
@@ -105,32 +108,6 @@ function checkUserAccountStatus {
     return (Get-MgUser -UserId $UserId -Property AccountEnabled).AccountEnabled
 }
 
-<# Security Defaults section #>
-function checkSecurityDefaults {
-    Write-Host "Checking Security Defaults"
-    return (Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy -Property "isEnabled").IsEnabled
-}
-
-function checkSecurityDefaultsReport {
-    param (
-        [System.Boolean]$Fix
-    )
-    if (checkSecurityDefaults) {
-        return "<br><h3>Security Defaults enabled</h3>"
-    }
-    #Todo: Enable / Disable Security Defaults
-    return "<br><h3>Security Defaults disabled</h3>"
-}
-
-function updateSecurityDefaults {
-    param ([System.Boolean]$enable)
-    $params = @{
-        IsEnabled = $enable
-    }
-    Write-Host "Updating Security Defaults"
-    Update-MgPolicyIdentitySecurityDefaultEnforcementPolicy -BodyParameter $params
-}
-
  <# BreakGlass account Section #>
 function checkBreakGlassAccountReport {
     param (
@@ -139,41 +116,108 @@ function checkBreakGlassAccountReport {
     if ($BgAccount = getBreakGlassAccount) {
         return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account found</h3>"
     }
-    #Todo: Create BG Account
+    if ($create) {
+        createBreakGlassAccount
+        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account created</h3><p>Check console log for credentials</p>"
+    }
     return "<h3>BreakGlass account not found</h3><p>Create account with <code> -CreateBreakGlassAccount </code></p>"
 }
 
 function getBreakGlassAccount {
     Write-Host "Checking BreakGlass account"
-    $bgAccount = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
-    if (-not $bgAccount) { return }
-    return [pscustomobject]@{
-        DisplayName                       = $bgAccount.DisplayName
-        UserPrincipalName                 = $bgAccount.UserPrincipalName
-        GlobalAdmin                       = checkGlobalAdminRole $bgAccount.Id
+    $BgAccounts = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
+    if (-not $bgAccounts) { return }
+    foreach ($BgAccount in $BgAccounts) {
+        Add-Member -InputObject $BgAccount -NotePropertyName "GlobalAdmin" -NotePropertyValue (checkGlobalAdminRole $BgAccount.Id)
     }
+    return $BgAccounts
 }
 
 function checkGlobalAdminRole {
     param (
         $AccountId
     )
-    Write-Host "Checking Global Admin Role"
+    Write-Host "Checking Global Admin role"
     if (Get-MgDirectoryRoleMember -DirectoryRoleId "30436c3a-f5cd-467a-9b77-3267b1546b28" -Filter "id eq '$($AccountId)'") {
         return $true
     }
 }
 
-function creeateBreakGlassAccount {
-    Write-Output "Creating BreakGlass Account:"
-    $name = -join ((97..122) | Get-Random -Count 64 | % { [char]$_ })
-    $pass = [System.Web.Security.Membership]::GeneratePassword(64, 4)
-    $UPN = "$name@$MsDomain"
-    
-    Write-Output $UPN
-    $DisplayName = "BreakGlass $name"
-    Write-Output "Password:"
-    Write-Output $pass
+function createBreakGlassAccount {
+    Write-Output "Creating BreakGlass account:"
+    $Name = -join ((97..122) | Get-Random -Count 64 | % { [char]$_ })
+    $DisplayName = "BreakGlass $Name"
+    $Domain = (Get-MgDomain -Property id, IsInitial | Where-Object {$_.IsInitial -eq $true}).Id
+    $UPN = "$Name@$Domain"
+    $PasswordProfile = @{
+        ForceChangePasswordNextSignIn = $false
+        ForceChangePasswordNextSignInWithMfa = $false
+        Password = generatePassword
+    }
+    $BgAccount = New-MgUser -DisplayName $DisplayName -UserPrincipalName $UPN -MailNickName $Name -PasswordProfile $PasswordProfile -PreferredLanguage "en-US" -AccountEnabled
+    $DirObject = @{
+        "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($BgAccount.id)"
+    }
+    New-MgDirectoryRoleMemberByRef -DirectoryRoleId "30436c3a-f5cd-467a-9b77-3267b1546b28" -BodyParameter $DirObject
+    $BgAccountDisplay = [pscustomobject]@{
+        DisplayName                       = $DisplayName
+        UserPrincipalName                 = $UPN
+        # Password                          = ConvertFrom-SecureString $PasswordProfile.Password -AsPlainText
+        Password                          = $PasswordProfile.Password
+    }
+    Write-Host ($BgAccountDisplay | Format-List | Out-String)
+}
+
+function generatePassword {
+    param(
+        [ValidateRange(12, 256)]
+        [int]
+        $length = 64
+    )
+    $symbols = '!@#$%&*'.ToCharArray()
+    $characterList = 'a'..'z' + 'A'..'Z' + '0'..'9' + $symbols
+    do {
+        $password = -join (0..$length | % { $characterList | Get-Random })
+        [int]$hasLowerChar = $password -cmatch '[a-z]'
+        [int]$hasUpperChar = $password -cmatch '[A-Z]'
+        [int]$hasDigit = $password -match '[0-9]'
+        [int]$hasSymbol = $password.IndexOfAny($symbols) -ne -1
+    }
+    until (($hasLowerChar + $hasUpperChar + $hasDigit + $hasSymbol) -ge 4)
+    # $password | ConvertTo-SecureString -AsPlainText
+    $password
+}
+
+<# Security Defaults section #>
+function checkSecurityDefaultsReport {
+    param (
+        [System.Boolean]$EnableSecurityDefaults,
+        [System.Boolean]$DisableSecurityDefaults
+    )
+    if ($EnableSecurityDefaults -and (-not $DisableSecurityDefaults)) {
+        updateSecurityDefaults -Enable $true
+    }  
+    if ($DisableSecurityDefaults -and (-not $EnableSecurityDefaults)) {
+        updateSecurityDefaults -Enable $false
+    }
+    if (checkSecurityDefaults) {
+        return "<br><h3>Security Defaults enabled</h3>"
+    }
+    return "<br><h3>Security Defaults disabled</h3>"
+}
+
+function checkSecurityDefaults {
+    Write-Host "Checking Security Defaults"
+    return (Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy -Property "isEnabled").IsEnabled
+}
+
+function updateSecurityDefaults {
+    param ([System.Boolean]$Enable)
+    $params = @{
+        IsEnabled = $Enable
+    }
+    Write-Host "Updating Security Defaults enable:" $Enable
+    Update-MgPolicyIdentitySecurityDefaultEnforcementPolicy -BodyParameter $params
 }
 
 <# Conditional Access section #>
@@ -183,72 +227,68 @@ function getConditionalAccessPolicy {
 }
 
 function checkConditionalAccessPolicyReport {
-    param (
-        $Fix
-    )
     if ($Policy = getConditionalAccessPolicy) {
-
         return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access Policy found</h3>"
     }
-    #Todo: Create BG Account
     return "<br><h3>Conditional Access Policy not found</h3>"
 }
-function deleteConditionalAccessPolicy {
-    param (
-        [Parameter(Mandatory = $true)]
-        $Policies
-    )
-    foreach ($Policy in $Policies) {
-        Write-Host "Removing existing Conditional Access policies"
-        Remove-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $Policy.Id
-    }
-}
 
-function cleanUpConditionalAccessPolicy {
-    $Policies = getConditionalAccessPolicy
-    deleteConditionalAccessPolicy $Policies
-}
+# function deleteConditionalAccessPolicy {
+#     param (
+#         [Parameter(Mandatory = $true)]
+#         $Policies
+#     )
+#     foreach ($Policy in $Policies) {
+#         Write-Host "Removing existing Conditional Access policies"
+#         Remove-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $Policy.Id
+#     }
+# }
 
-function getNamedLocations {
-    return Get-MgIdentityConditionalAccessNamedLocation -Property Id, DisplayName
-}
+# function cleanUpConditionalAccessPolicy {
+#     $Policies = getConditionalAccessPolicy
+#     deleteConditionalAccessPolicy $Policies
+# }
 
-function createConditionalAccessPolicy {
-    $params = @{
-        DisplayName   = "Require MFA from all unknown locations"
-        State         = "enabled"
-        Conditions    = @{
-            Applications = @{
-                IncludeApplications = @(
-                    "All"
-                )
-            }
-            Users        = @{
-                IncludeUsers = @(
-                    "All"
-                )
-                ExcludeUsers = @(
-                    getBreakGlassAccount.Id
-                )
-            }
-            Locations    = @{
-                IncludeLocations = @(
-                    "All"
-                )
-                ExcludeLocations = @(
-                    "AllTrusted"
-                )
-            }
-        }
-        GrantControls = @{
-            Operator        = "OR"
-            BuiltInControls = @(
-                "mfa"
-            )
-        }
-    }
-    New-MgIdentityConditionalAccessPolicy -BodyParameter $params
-}
+# function getNamedLocations {
+#     return Get-MgIdentityConditionalAccessNamedLocation -Property Id, DisplayName
+# }
+
+# function createConditionalAccessPolicy {
+#     $params = @{
+#         DisplayName   = "Require MFA from all unknown locations"
+#         State         = "enabled"
+#         Conditions    = @{
+#             Applications = @{
+#                 IncludeApplications = @(
+#                     "All"
+#                 )
+#             }
+#             Users        = @{
+#                 IncludeUsers = @(
+#                     "All"
+#                 )
+#                 ExcludeUsers = @(
+#                     getBreakGlassAccount.Id
+#                 )
+#             }
+#             Locations    = @{
+#                 IncludeLocations = @(
+#                     "All"
+#                 )
+#                 ExcludeLocations = @(
+#                     "AllTrusted"
+#                 )
+#             }
+#         }
+#         GrantControls = @{
+#             Operator        = "OR"
+#             BuiltInControls = @(
+#                 "mfa"
+#             )
+#         }
+#     }
+#     New-MgIdentityConditionalAccessPolicy -BodyParameter $params
+# }
 
 <# Shared Mailbox section #>
 function getSharedMailboxes {
@@ -261,15 +301,10 @@ function checkSharedMailboxLogin {
         $Mailbox
     )
     $ReginalConfig = $Mailbox | Get-MailboxRegionalConfiguration
-    return [pscustomobject]@{
-        DisplayName                       = $Mailbox.DisplayName
-        UserPrincipalName                 = $Mailbox.UserPrincipalName
-        Language                          = $ReginalConfig.Language
-        TimeZone                          = $ReginalConfig.TimeZone
-        MessageCopyForSentAsEnabled       = $Mailbox.MessageCopyForSentAsEnabled
-        MessageCopyForSendOnBehalfEnabled = $Mailbox.MessageCopyForSendOnBehalfEnabled
-        LoginAllowed                      = checkUserAccountStatus $Mailbox.UserPrincipalName
-    }
+    Add-Member -InputObject $Mailbox -NotePropertyName "Language" -NotePropertyValue $ReginalConfig.Language
+    Add-Member -InputObject $Mailbox -NotePropertyName "TimeZone" -NotePropertyValue $ReginalConfig.TimeZone
+    Add-Member -InputObject $Mailbox -NotePropertyName "LoginAllowed" -NotePropertyValue (checkUserAccountStatus $Mailbox.UserPrincipalName)
+    return $Mailbox
 }
 
 function checkSharedMailboxReport {
@@ -335,8 +370,8 @@ $Report = @()
 
 $Report += "<br><h2>Azure Active Directory security settings</h2>"
 $Report += checkBreakGlassAccountReport -Create $CreateBreakGlassAccount
-$Report += checkSecurityDefaultsReport -Fix $false
-$Report += checkConditionalAccessPolicyReport -Fix $false
+$Report += checkSecurityDefaultsReport -Enable $EnableSecurityDefaults -Disable $DisableSecurityDefaults
+$Report += checkConditionalAccessPolicyReport
 
 if ($AddExchangeOnlineReport) {
     $Report += "<br><h2>Exchange Online security settings</h2>"
