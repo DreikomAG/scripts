@@ -133,12 +133,16 @@ function getBreakGlassAccount {
     return $BgAccounts
 }
 
+function getGlobalAdminRoleId {
+    return (Get-MgDirectoryRole -Filter "DisplayName eq 'Global Administrator'" -Property Id).Id
+}
+
 function checkGlobalAdminRole {
     param (
         $AccountId
     )
     Write-Host "Checking Global Admin role"
-    if (Get-MgDirectoryRoleMember -DirectoryRoleId "30436c3a-f5cd-467a-9b77-3267b1546b28" -Filter "id eq '$($AccountId)'") {
+    if (Get-MgDirectoryRoleMember -DirectoryRoleId getGlobalAdminRoleId -Filter "id eq '$($AccountId)'") {
         return $true
     }
 }
@@ -158,7 +162,7 @@ function createBreakGlassAccount {
     $DirObject = @{
         "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($BgAccount.id)"
     }
-    New-MgDirectoryRoleMemberByRef -DirectoryRoleId "30436c3a-f5cd-467a-9b77-3267b1546b28" -BodyParameter $DirObject
+    New-MgDirectoryRoleMemberByRef -DirectoryRoleId getGlobalAdminRoleId -BodyParameter $DirObject
     $BgAccountDisplay = [pscustomobject]@{
         DisplayName                       = $DisplayName
         UserPrincipalName                 = $UPN
@@ -228,9 +232,9 @@ function getConditionalAccessPolicy {
 
 function checkConditionalAccessPolicyReport {
     if ($Policy = getConditionalAccessPolicy) {
-        return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access Policy found</h3>"
+        return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access policies found</h3>"
     }
-    return "<br><h3>Conditional Access Policy not found</h3>"
+    return "<br><h3>Conditional Access policies not found</h3>"
 }
 
 # function deleteConditionalAccessPolicy {
@@ -357,7 +361,7 @@ function setMailboxLang {
 
 <# Script logic start section #>
 if ($Install) {
-    Write-Host "Installing prerequisite"
+    Write-Host "Installing prerequisites"
     installEXO
     installGraph
     return
