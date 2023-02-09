@@ -3,72 +3,111 @@
 Param(
     [switch]$Install,
     [switch]$UseExistingExoSession,   
-    [switch]$CheckExo,  
-    [switch]$FixExo,
+    [switch]$KeepExoSessionAlive,    
     [switch]$UseExistingGraphSession,
-    [switch]$CheckAad,
-    [switch]$FixAad
+    [switch]$KeepGraphSessionAlive,
+    [switch]$AddExchangeOnlineReport,
+    [switch]$CreateBreakGlassAccount
 )
 $Version = "1.0.0"
 $script:ExoConnected = $false
 $script:GraphConnected = $false
 
-Write-Host "AzureAdDeployer Version " $Version
+Write-Host "AzureAdDeployer version " $Version
 
 $Desktop = [Environment]::GetFolderPath("Desktop")
 
-$ReportTitle = "AzureAdDeployer Report"
+$ReportTitle = "Security report"
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 
-$PostContentHtml = "<p id='CreationDate'>Creation Date: $(Get-Date)</p>"
+$PostContentHtml = "<p id='CreationDate'>Creation date: $(Get-Date)</p>"
 
+<# Install modules section #>
 function installEXO {
     if (Get-Module -Name ExchangeOnlineManagement -ListAvailable) {
-        Write-Host "Updating PowerShell ExchangeOnline Module"
+        Write-Host "Updating PowerShell Exchange Online module"
         Update-Module -Name ExchangeOnlineManagement -Scope CurrentUser -Force
     }
 
     if (-not (Get-Module -Name ExchangeOnlineManagement -ListAvailable)) {
-        Write-Host "Installing PowerShell ExchangeOnline Module"
+        Write-Host "Installing PowerShell Exchange Online module"
         Install-Module -Name ExchangeOnlineManagement -Scope CurrentUser -Force
     }
 }
 
 function installGraph {
     if (Get-Module -Name Microsoft.Graph -ListAvailable) {
-        Write-Host "Updating PowerShell Graph SDK Module"
+        Write-Host "Updating PowerShell Graph SDK module"
         Update-Module -Name Microsoft.Graph -Scope CurrentUser -Force
     }
 
     if (-not (Get-Module -Name Microsoft.Graph -ListAvailable)) {
-        Write-Host "Installing PowerShell Graph SDK Module"
+        Write-Host "Installing PowerShell Graph SDK module"
         Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force
     }
 }
-
-# function installAzureAd {
-#     if (Get-Module -Name AzureAD -ListAvailable) {
-#         Write-Host "Updating PowerShell AzureAD Module"
-#         Update-Module -Name AzureAD -Scope CurrentUser -Force
-#     }
-
-#     if (-not (Get-Module -Name AzureAD -ListAvailable)) {
-#         Write-Host "Installing PowerShell AzureAD Module"
-#         Install-Module -Name AzureAD -Scope CurrentUser -Force
-#     }
-# }
-
+    
+<# Connect sessions section #>
 function connectGraph {
     if ($UseExistingGraphSession) { return }
     if (-not $script:GraphConnected) {
         Write-Host "Connecting to Graph"
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
-     User.Read.All, User.ReadWrite.All, Directory.Read.All, Directory.ReadWrite.All"
+        User.Read.All, User.ReadWrite.All, Directory.Read.All, Directory.ReadWrite.All"
     }
     $script:GraphConnected = $true
 }
 
+function connectExo {
+    if ($UseExistingExoSession) { return }
+    if (-not $script:ExoConnected) {
+        Write-Host "Connecting Exchange Online PowerShell session"
+        # Connect-ExchangeOnline -ShowBanner:$false -Device
+        Connect-ExchangeOnline -ShowBanner:$false
+    }
+    $script:ExoConnected = $true
+}
+
+<# Disconect session section #>
+function disconnectExo {
+    if ($UseExistingExoSession) { return }
+    if ($script:ExoConnected) {
+        Write-Host "Disconnecting Exchange Online PowerShell session"
+        Disconnect-ExchangeOnline -Confirm:$false
+    }
+    $script:ExoConnected = $false
+}
+
+function disconnectGraph {
+    if ($UseExistingGraphSession) { return }
+    if ($script:GraphConnected) {
+        Write-Host "Disconnecting Graph API session"
+        Disconnect-Graph
+    }
+    $script:GraphConnected = $false
+}
+
+<# User Account section #>
+function disableUserAccount {
+    param (
+        $UserId
+    )
+    $params = @{
+        AccountEnabled = "false"
+    }
+    Update-MgUser -UserId $UserId -BodyParameter $params
+}
+
+function checkUserAccountStatus {
+    param(
+        $UserId
+    )
+    return (Get-MgUser -UserId $UserId -Property AccountEnabled).AccountEnabled
+}
+
+<# Security Defaults section #>
 function checkSecurityDefaults {
+    Write-Host "Checking Security Defaults"
     return (Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy -Property "isEnabled").IsEnabled
 }
 
@@ -77,7 +116,6 @@ function checkSecurityDefaultsReport {
         [System.Boolean]$Fix
     )
     if (checkSecurityDefaults) {
-
         return "<br><h3>Security Defaults enabled</h3>"
     }
     #Todo: Enable / Disable Security Defaults
@@ -89,28 +127,59 @@ function updateSecurityDefaults {
     $params = @{
         IsEnabled = $enable
     }
+    Write-Host "Updating Security Defaults"
     Update-MgPolicyIdentitySecurityDefaultEnforcementPolicy -BodyParameter $params
 }
 
-function getBreakGlassAccount {
-    $bgAccount = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
-    if ($bgAccount) { return $bgAccount }
-}
-
+ <# BreakGlass account Section #>
 function checkBreakGlassAccountReport {
     param (
-        $Fix
+        $Create
     )
     if ($BgAccount = getBreakGlassAccount) {
-
-        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, Id -As Table -Fragment -PreContent "<br><h3>BreakGlass Account found</h3>"
+        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account found</h3>"
     }
     #Todo: Create BG Account
-    return "<br><h3>BreakGlass Account not found</h3>"
+    return "<h3>BreakGlass account not found</h3><p>Create account with <code> -CreateBreakGlassAccount </code></p>"
 }
 
+function getBreakGlassAccount {
+    Write-Host "Checking BreakGlass account"
+    $bgAccount = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
+    if (-not $bgAccount) { return }
+    return [pscustomobject]@{
+        DisplayName                       = $bgAccount.DisplayName
+        UserPrincipalName                 = $bgAccount.UserPrincipalName
+        GlobalAdmin                       = checkGlobalAdminRole $bgAccount.Id
+    }
+}
+
+function checkGlobalAdminRole {
+    param (
+        $AccountId
+    )
+    Write-Host "Checking Global Admin Role"
+    if (Get-MgDirectoryRoleMember -DirectoryRoleId "30436c3a-f5cd-467a-9b77-3267b1546b28" -Filter "id eq '$($AccountId)'") {
+        return $true
+    }
+}
+
+function creeateBreakGlassAccount {
+    Write-Output "Creating BreakGlass Account:"
+    $name = -join ((97..122) | Get-Random -Count 64 | % { [char]$_ })
+    $pass = [System.Web.Security.Membership]::GeneratePassword(64, 4)
+    $UPN = "$name@$MsDomain"
+    
+    Write-Output $UPN
+    $DisplayName = "BreakGlass $name"
+    Write-Output "Password:"
+    Write-Output $pass
+}
+
+<# Conditional Access section #>
 function getConditionalAccessPolicy {
-    return Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName
+    Write-Host "Checking Conditional Access policies"
+    return Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName, State
 }
 
 function checkConditionalAccessPolicyReport {
@@ -119,10 +188,10 @@ function checkConditionalAccessPolicyReport {
     )
     if ($Policy = getConditionalAccessPolicy) {
 
-        return $Policy | ConvertTo-HTML -Property DisplayName, Id -As Table -Fragment -PreContent "<h3>Conditinal Access Policy found</h3>"
+        return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access Policy found</h3>"
     }
     #Todo: Create BG Account
-    return "<br>Conditinal Access Policy not found</h3>"
+    return "<br><h3>Conditional Access Policy not found</h3>"
 }
 function deleteConditionalAccessPolicy {
     param (
@@ -130,6 +199,7 @@ function deleteConditionalAccessPolicy {
         $Policies
     )
     foreach ($Policy in $Policies) {
+        Write-Host "Removing existing Conditional Access policies"
         Remove-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $Policy.Id
     }
 }
@@ -180,51 +250,7 @@ function createConditionalAccessPolicy {
     New-MgIdentityConditionalAccessPolicy -BodyParameter $params
 }
 
-function disableUserAccount {
-    param (
-        $UserId
-    )
-    $params = @{
-        AccountEnabled = "false"
-    }
-    Update-MgUser -UserId $UserId -BodyParameter $params
-}
-
-function checkUserAccountStatus {
-    param(
-        $UserId
-    )
-    return (Get-MgUser -UserId $UserId -Property AccountEnabled).AccountEnabled
-}
-
-function connectExo {
-    if ($UseExistingExoSession) { return }
-    if (-not $script:ExoConnected) {
-        Write-Host "Connecting to EXO"
-        # Connect-ExchangeOnline -ShowBanner:$false -Device
-        Connect-ExchangeOnline -ShowBanner:$false
-    }
-    $script:ExoConnected = $true
-}
-
-function disconnectExo {
-    if ($UseExistingExoSession) { return }
-    if ($script:ExoConnected) {
-        Write-Host "Disconnecting to EXO"
-        Disconnect-ExchangeOnline -Confirm:$false
-    }
-    $script:ExoConnected = $false
-}
-
-function disconnectGraph {
-    if ($UseExistingGraphSession) { return }
-    if ($script:GraphConnected) {
-        Write-Host "Disconnecting to Graph"
-        Disconnect-Graph
-    }
-    $script:GraphConnected = $false
-}
-
+<# Shared Mailbox section #>
 function getSharedMailboxes {
     return Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
     UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled
@@ -250,6 +276,7 @@ function checkSharedMailboxReport {
     param(
         [System.Boolean]$Fix
     )
+    Write-Host "Checking Shared Mailboxes"
     $MailboxReport = @()
     foreach ($Mailbox in getSharedMailboxes) {
         if ($Fix) {
@@ -261,26 +288,7 @@ function checkSharedMailboxReport {
     }
     return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
     MessageCopyForSendOnBehalfEnabled, LoginAllowed `
-        -Fragment -PreContent "<h3>Shared Mailbox Report</h3>"
-}
-
-function checkMailboxReport {
-    param(
-        [System.Boolean]$Fix
-    )
-    $Mailboxes = Get-EXOMailbox -ResultSize:Unlimited
-    if ($Fix) {
-        $Mailboxes | setMailboxLang
-    }
-    return $Mailboxes | Get-MailboxRegionalConfiguration | ConvertTo-HTML -As Table -Property Identity, Language, TimeZone `
-        -Fragment -PreContent "<h3>User Mailbox Report</h3>"
-}
-
-function setMailboxLang {
-    param(
-        $Mailbox
-    )
-    $Mailbox | Set-MailboxRegionalConfiguration -LocalizeDefaultFolderName:$true -Language de-CH -TimeZone "W. Europe Standard Time" 
+        -Fragment -PreContent "<br><h3>Shared Mailbox report</h3>"
 }
 
 function setSharedMailboxEnableCopyToSent {
@@ -290,68 +298,86 @@ function setSharedMailboxEnableCopyToSent {
     $Mailbox | Set-Mailbox -MessageCopyForSentAsEnabled $True -MessageCopyForSendOnBehalfEnabled $True
 }
 
+<# User Mailbox section #>
+function checkMailboxReport {
+    param(
+        [System.Boolean]$Fix
+    )
+    Write-Host "Checking User Mailboxes"
+    $Mailboxes = Get-EXOMailbox -ResultSize:Unlimited
+    if ($Fix) {
+        $Mailboxes | setMailboxLang
+    }
+    return $Mailboxes | Get-MailboxRegionalConfiguration | ConvertTo-HTML -As Table -Property Identity, Language, TimeZone `
+        -Fragment -PreContent "<h3>User Mailbox report</h3> <p>Set language to de-CH with <code> -FixMailboxLanguage </code></p>"
+}
+
+function setMailboxLang {
+    param(
+        $Mailbox
+    )
+    Write-Host "Updating Mailbox language"
+    $Mailbox | Set-MailboxRegionalConfiguration -LocalizeDefaultFolderName:$true -Language de-CH -TimeZone "W. Europe Standard Time" 
+}
+
+<# Script logic start section #>
 if ($Install) {
     Write-Host "Installing prerequisite"
     installEXO
     installGraph
-    # installAzureAd
     return
 }
 
-connectExo
+if ($AddExchangeOnlineReport) { connectExo }
 connectGraph
+
 $Report = @()
 
-if ($CheckAad -or $FixAad) {
-    $Report += "<h2>AAD Security Settings</h2>"
-    $Report += checkBreakGlassAccountReport -Fix $FixAad
-    $Report += checkSecurityDefaultsReport -Fix $FixAad
-    $Report += checkConditionalAccessPolicyReport -Fix $FixAad
+$Report += "<br><h2>Azure Active Directory security settings</h2>"
+$Report += checkBreakGlassAccountReport -Create $CreateBreakGlassAccount
+$Report += checkSecurityDefaultsReport -Fix $false
+$Report += checkConditionalAccessPolicyReport -Fix $false
+
+if ($AddExchangeOnlineReport) {
+    $Report += "<br><h2>Exchange Online security settings</h2>"
+    $Report += checkMailboxReport -FixLanguage $ApplyFixMailboxLanguage
+    $Report += checkSharedMailboxReport -FixLanguage $ApplyFixMailboxLanguage -FixLogin $ApplyFixSharedMailboxLogin
 }
 
-if ($CheckExo -or $FixExo) {
-    $Report += "<h2>EXO Security Settings</h2>"
-    $Report += checkMailboxReport -Fix $FixExo
-    $Report += checkSharedMailboxReport -Fix $FixExo
+if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
+    disconnectExo
 }
 
+if ($script:GraphConnected -and (-not $KeepGraphSessionAlive)) {
+    disconnectGraph
+}
 
-# if ($script:ExoConnected) {
-#     disconnectExo
-# }
-
-# if ($script:GraphConnected) {
-#     disconnectGraph
-# }
-
+<# CSS styles section #>
 $Header = @"
 <style>
-
 h1 {
-
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
-    font-size: 28px;
-
+    font-size: 32px;
 }
 
-
 h2 {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #666666;
+    font-size: 24px;
+}
 
+h3 {
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
     font-size: 16px;
     
 }
 
-h3 {
-
+p {
     font-family: Arial, Helvetica, sans-serif;
-    color: #666666;
     font-size: 12px;
-    
 }
-
 
 table {
     font-size: 12px;
@@ -378,32 +404,28 @@ tbody tr:nth-child(even) {
     background: #f0f0f2;
 }
 
-
 #CreationDate {
 
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
     font-size: 12px;
-
 }
-
 
 .StopStatus {
 
     color: #ff0000;
 }
 
-
 .RunningStatus {
     
     color: #008000;
 }
-
 </style>
 "@
 
-
-Write-Host "Generating HTML Report"
+<# HTML report section #>
+Write-Host "Generating HTML report"
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\AzureAdDeployer-Report.html
 Invoke-Item $Desktop\AzureAdDeployer-Report.html
+Read-Host "Click [ENTER] key to exit AzureAdDeployer"
