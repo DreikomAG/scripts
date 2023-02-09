@@ -48,6 +48,8 @@ function installGraph {
         Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force
     }
 }
+
+##TODO: Always check if Modules are installed before run
     
 <# Connect sessions section #>
 function connectGraph {
@@ -85,7 +87,7 @@ function disconnectGraph {
     if ($UseExistingGraphSession) { return }
     if ($script:GraphConnected) {
         Write-Host "Disconnecting Graph API session"
-        Disconnect-Graph
+        Disconnect-Graph | Out-Null
     }
     $script:GraphConnected = $false
 }
@@ -163,33 +165,49 @@ function createBreakGlassAccount {
         "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($BgAccount.id)"
     }
     New-MgDirectoryRoleMemberByRef -DirectoryRoleId (getGlobalAdminRoleId) -BodyParameter $DirObject
-    $BgAccountDisplay = [pscustomobject]@{
-        DisplayName                       = $DisplayName
-        UserPrincipalName                 = $UPN
-        # Password                          = ConvertFrom-SecureString $PasswordProfile.Password -AsPlainText
-        Password                          = $PasswordProfile.Password
-    }
-    Write-Host ($BgAccountDisplay | Format-List | Out-String)
+    Add-Member -InputObject $BgAccount -NotePropertyName "Password" -NotePropertyValue $PasswordProfile.Password
+    Write-Host ($BgAccount | Select-Object -Property Id, DisplayName, UserPrincipalName, Password | Format-List | Out-String)
 }
 
-function generatePassword {
-    param(
-        [ValidateRange(12, 256)]
-        [int]
-        $length = 64
+function generatePassword  {
+    param (
+        [ValidateRange(4,[int]::MaxValue)]
+        [int] $length = 64,
+        [int] $upper = 4,
+        [int] $lower = 4,
+        [int] $numeric = 4,
+        [int] $special = 4
     )
-    $symbols = '!@#$%&*'.ToCharArray()
-    $characterList = 'a'..'z' + 'A'..'Z' + '0'..'9' + $symbols
-    do {
-        $password = -join (0..$length | % { $characterList | Get-Random })
-        [int]$hasLowerChar = $password -cmatch '[a-z]'
-        [int]$hasUpperChar = $password -cmatch '[A-Z]'
-        [int]$hasDigit = $password -match '[0-9]'
-        [int]$hasSymbol = $password.IndexOfAny($symbols) -ne -1
+    if($upper + $lower + $numeric + $special -gt $length) {
+        throw "number of upper/lower/numeric/special char must be lower or equal to length"
     }
-    until (($hasLowerChar + $hasUpperChar + $hasDigit + $hasSymbol) -ge 4)
-    # $password | ConvertTo-SecureString -AsPlainText
-    $password
+    $uCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    $lCharSet = "abcdefghijklmnopqrstuvwxyz"
+    $nCharSet = "0123456789"
+    $sCharSet = "/*-+,!?=()@;:._"
+    $charSet = ""
+    if($upper -gt 0) { $charSet += $uCharSet }
+    if($lower -gt 0) { $charSet += $lCharSet }
+    if($numeric -gt 0) { $charSet += $nCharSet }
+    if($special -gt 0) { $charSet += $sCharSet }
+    $charSet = $charSet.ToCharArray()
+    $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+    $bytes = New-Object byte[]($length)
+    $rng.GetBytes($bytes)
+    $result = New-Object char[]($length)
+    for ($i = 0 ; $i -lt $length ; $i++) {
+        $result[$i] = $charSet[$bytes[$i] % $charSet.Length]
+    }
+    $password = (-join $result)
+    $valid = $true
+    if($upper   -gt ($password.ToCharArray() | Where-Object {$_ -cin $uCharSet.ToCharArray() }).Count) { $valid = $false }
+    if($lower   -gt ($password.ToCharArray() | Where-Object {$_ -cin $lCharSet.ToCharArray() }).Count) { $valid = $false }
+    if($numeric -gt ($password.ToCharArray() | Where-Object {$_ -cin $nCharSet.ToCharArray() }).Count) { $valid = $false }
+    if($special -gt ($password.ToCharArray() | Where-Object {$_ -cin $sCharSet.ToCharArray() }).Count) { $valid = $false }
+    if(!$valid) {
+         $password = Get-RandomPassword $length $upper $lower $numeric $special
+    }
+    return $password
 }
 
 <# Security Defaults section #>
