@@ -312,6 +312,10 @@ function checkConditionalAccessPolicyReport {
 #     New-MgIdentityConditionalAccessPolicy -BodyParameter $params
 # }
 
+<# Enterprise Application section #>
+
+##TODO: https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/configure-user-consent?pivots=ms-powershell
+
 <# Shared Mailbox section #>
 function getSharedMailboxes {
     return Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
