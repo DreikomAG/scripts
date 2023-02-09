@@ -142,7 +142,7 @@ function checkGlobalAdminRole {
         $AccountId
     )
     Write-Host "Checking Global Admin role"
-    if (Get-MgDirectoryRoleMember -DirectoryRoleId getGlobalAdminRoleId -Filter "id eq '$($AccountId)'") {
+    if (Get-MgDirectoryRoleMember -DirectoryRoleId (getGlobalAdminRoleId) -Filter "id eq '$($AccountId)'") {
         return $true
     }
 }
