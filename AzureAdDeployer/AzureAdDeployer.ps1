@@ -164,7 +164,7 @@ function checkGlobalAdminRole {
 
 function createBreakGlassAccount {
     Write-Host "Creating BreakGlass account:"
-    $Name = -join ((97..122) | Get-Random -Count 64 | % { [char]$_ })
+    $Name = -join ((97..122) | Get-Random -Count 64 | ForEach-Object { [char]$_ })
     $DisplayName = "BreakGlass $Name"
     $Domain = (Get-MgDomain -Property id, IsInitial | Where-Object { $_.IsInitial -eq $true }).Id
     $UPN = "$Name@$Domain"
