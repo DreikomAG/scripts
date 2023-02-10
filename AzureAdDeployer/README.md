@@ -4,7 +4,7 @@
 
 ### General
 
-- Generates HTML report to yoor Desktop
+- Generates a HTML report to your Desktop called `AzureAdDeployer-Report.html`
 
 ### Azure Active Directory
 
