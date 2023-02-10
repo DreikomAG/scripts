@@ -10,7 +10,8 @@ Param(
     [switch]$CreateBreakGlassAccount,
     [switch]$EnableSecurityDefaults,
     [switch]$DisableSecurityDefaults,
-    [switch]$SetMailboxLanguage
+    [switch]$SetMailboxLanguage,
+    [switch]$DisableSharedMailboxLogin
 )
 $Version = "1.0.0"
 $script:ExoConnected = $false
@@ -111,12 +112,15 @@ function disconnectGraph {
 <# User Account section #>
 function disableUserAccount {
     param (
-        $UserId
+        $Users
     )
     $params = @{
         AccountEnabled = "false"
     }
-    Update-MgUser -UserId $UserId -BodyParameter $params
+    Write-Host "Disable user accounts"
+    foreach ($User in $Users) {
+        Update-MgUser -UserId $User.Id -BodyParameter $params
+    }
 }
 
 function checkUserAccountStatus {
@@ -342,7 +346,7 @@ function checkSharedMailboxReport {
     $Mailboxes = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
     UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled
     if ($Language) { setMailboxLang -Mailbox $Mailboxes }
-    # if ($DisableLogin) { disableUserAccount $Mailboxes }
+    if ($DisableLogin) { disableUserAccount $Mailboxes }
     $MailboxReport = @()
     foreach ($Mailbox in $Mailboxes) {
         # setSharedMailboxEnableCopyToSent $Mailbox
@@ -414,7 +418,7 @@ if ($Install) {
     return
 }
 
-if ($AddExchangeOnlineReport -or $SetMailboxLanguage) { connectExo }
+if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLogin) { connectExo }
 connectGraph
 
 $Report = @()
@@ -424,10 +428,10 @@ $Report += checkBreakGlassAccountReport -Create $CreateBreakGlassAccount
 $Report += checkSecurityDefaultsReport -Enable $EnableSecurityDefaults -Disable $DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
 
-if ($AddExchangeOnlineReport -or $SetMailboxLanguage) {
+if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLogin) {
     $Report += "<br><h2>Exchange Online security settings</h2>"
     $Report += checkMailboxReport -Language $SetMailboxLanguage
-    $Report += checkSharedMailboxReport -Language $SetMailboxLanguage
+    $Report += checkSharedMailboxReport -Language $SetMailboxLanguage -DisableLogin $DisableSharedMailboxLogin
 }
 
 if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
