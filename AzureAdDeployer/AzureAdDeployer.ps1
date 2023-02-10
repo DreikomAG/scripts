@@ -119,7 +119,7 @@ function disableUserAccount {
     }
     Write-Host "Disable user accounts"
     foreach ($User in $Users) {
-        Update-MgUser -UserId $User.Id -BodyParameter $params
+        Update-MgUser -UserId $User.UserPrincipalName -BodyParameter $params
     }
 }
 
@@ -163,7 +163,6 @@ function checkGlobalAdminRole {
     param (
         $AccountId
     )
-    Write-Host "Checking Global Admin role"
     if (Get-MgDirectoryRoleMember -DirectoryRoleId (getGlobalAdminRoleId) -Filter "id eq '$($AccountId)'") {
         return $true
     }
@@ -413,13 +412,13 @@ function setMailboxLang {
 
 if ($Install) {
     Write-Host "Installing prerequisites"
-    installEXO
     installGraph
+    installEXO
     return
 }
 
-if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLogin) { connectExo }
 connectGraph
+if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLogin) { connectExo }
 
 $Report = @()
 
