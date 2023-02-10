@@ -9,12 +9,15 @@ Param(
     [switch]$AddExchangeOnlineReport,
     [switch]$CreateBreakGlassAccount,
     [switch]$EnableSecurityDefaults,
-    [switch]$DisableSecurityDefaults
+    [switch]$DisableSecurityDefaults,
+    [switch]$SetMailboxLanguage
 )
 $Version = "1.0.0"
 $script:ExoConnected = $false
 $script:GraphConnected = $false
 $script:InteractiveMode = $false
+$script:MailboxLanguageCode = "de-CH"
+$script:MailboxTimeZone = "W. Europe Standard Time" 
 
 Write-Host "AzureAdDeployer version " $Version
 
@@ -330,12 +333,27 @@ function checkConditionalAccessPolicyReport {
 ##TODO: https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/configure-user-consent?pivots=ms-powershell
 
 <# Shared Mailbox section #>
-function getSharedMailboxes {
-    return Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
+function checkSharedMailboxReport {
+    param(
+        [System.Boolean]$Language,
+        [System.Boolean]$DisableLogin
+    )
+    Write-Host "Checking Shared mailboxes"
+    $Mailboxes = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
     UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled
+    if ($Language) { setMailboxLang -Mailbox $Mailboxes }
+    # if ($DisableLogin) { disableUserAccount $Mailboxes }
+    $MailboxReport = @()
+    foreach ($Mailbox in $Mailboxes) {
+        # setSharedMailboxEnableCopyToSent $Mailbox
+        $MailboxReport += checkMailboxLoginAndLocation $Mailbox
+    }
+    return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
+    MessageCopyForSendOnBehalfEnabled, LoginAllowed `
+        -Fragment -PreContent "<br><h3>Shared mailbox report</h3>"
 }
 
-function checkSharedMailboxLogin {
+function checkMailboxLoginAndLocation {
     param (
         $Mailbox
     )
@@ -346,52 +364,38 @@ function checkSharedMailboxLogin {
     return $Mailbox
 }
 
-function checkSharedMailboxReport {
-    param(
-        [System.Boolean]$Fix
-    )
-    Write-Host "Checking Shared Mailboxes"
-    $MailboxReport = @()
-    foreach ($Mailbox in getSharedMailboxes) {
-        if ($Fix) {
-            setSharedMailboxEnableCopyToSent $Mailbox
-            setMailboxLang $Mailbox
-            disableUserAccount $Mailbox.UserPrincipalName
-        }
-        $MailboxReport += checkSharedMailboxLogin $Mailbox
-    }
-    return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
-    MessageCopyForSendOnBehalfEnabled, LoginAllowed `
-        -Fragment -PreContent "<br><h3>Shared Mailbox report</h3>"
-}
-
 function setSharedMailboxEnableCopyToSent {
     param(
         $Mailbox
     )
+    Write-Host "Enable shared mailboxes copy for sent as"
     $Mailbox | Set-Mailbox -MessageCopyForSentAsEnabled $True -MessageCopyForSendOnBehalfEnabled $True
 }
 
 <# User Mailbox section #>
 function checkMailboxReport {
     param(
-        [System.Boolean]$Fix
+        [System.Boolean]$Language
     )
-    Write-Host "Checking User Mailboxes"
-    $Mailboxes = Get-EXOMailbox -ResultSize:Unlimited
-    if ($Fix) {
-        $Mailboxes | setMailboxLang
+    Write-Host "Checking User mailboxes"
+    $Mailboxes = Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize:Unlimited -Properties DisplayName, UserPrincipalName
+    if ($Language) {
+        setMailboxLang -Mailbox $Mailboxes
     }
-    return $Mailboxes | Get-MailboxRegionalConfiguration | ConvertTo-HTML -As Table -Property Identity, Language, TimeZone `
-        -Fragment -PreContent "<h3>User Mailbox report</h3> <p>Set language to de-CH with <code> -FixMailboxLanguage </code></p>"
+    $MailboxReport = @()
+    foreach ($Mailbox in $Mailboxes) {
+        $MailboxReport += checkMailboxLoginAndLocation $Mailbox
+    }
+    return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, LoginAllowed `
+        -Fragment -PreContent "<h3>User mailbox report</h3> <p>Set language with <code> -SetMailboxLanguage </code></p>"
 }
 
 function setMailboxLang {
     param(
         $Mailbox
     )
-    Write-Host "Updating Mailbox language"
-    $Mailbox | Set-MailboxRegionalConfiguration -LocalizeDefaultFolderName:$true -Language de-CH -TimeZone "W. Europe Standard Time" 
+    Write-Host "Setting mailboxes language:" $script:MailboxLanguageCode "timezone:" $script:MailboxTimeZone
+    $Mailbox | Set-MailboxRegionalConfiguration -LocalizeDefaultFolderName:$true -Language $script:MailboxLanguageCode -TimeZone $script:MailboxTimeZone
 }
 
 <# Script logic start section #>
@@ -410,7 +414,7 @@ if ($Install) {
     return
 }
 
-if ($AddExchangeOnlineReport) { connectExo }
+if ($AddExchangeOnlineReport -or $SetMailboxLanguage) { connectExo }
 connectGraph
 
 $Report = @()
@@ -420,10 +424,10 @@ $Report += checkBreakGlassAccountReport -Create $CreateBreakGlassAccount
 $Report += checkSecurityDefaultsReport -Enable $EnableSecurityDefaults -Disable $DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
 
-if ($AddExchangeOnlineReport) {
+if ($AddExchangeOnlineReport -or $SetMailboxLanguage) {
     $Report += "<br><h2>Exchange Online security settings</h2>"
-    $Report += checkMailboxReport -FixLanguage $ApplyFixMailboxLanguage
-    $Report += checkSharedMailboxReport -FixLanguage $ApplyFixMailboxLanguage -FixLogin $ApplyFixSharedMailboxLogin
+    $Report += checkMailboxReport -Language $SetMailboxLanguage
+    $Report += checkSharedMailboxReport -Language $SetMailboxLanguage
 }
 
 if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
