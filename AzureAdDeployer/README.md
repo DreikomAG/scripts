@@ -8,17 +8,17 @@
 
 ### Azure Active Directory
 
-- BreakGlass account: create, show
+- BreakGlass account: show, create
 
-- Security Defaults: enable, disable, show
+- Security Defaults: show, enable, disable
 
 - Conditional Access policies: show
 
 ### Exchange Online
 
-- User mailbox: show
+- User mailbox: show, set language
 
-- Shared mailbox: show
+- Shared mailbox: show, set language
 
 ## Infos
 
@@ -28,15 +28,26 @@
 
 ## Arguments
 
-### Common
+### General
 
 | Argument | Description |
 | --- | --- |
 | `-Install` | Install or update required PowerShell modules |
-| `-AddExchangeOnlineReport` | Add a report section for Exchange Online |
+
+### Azure Active directory
+
+| Argument | Description |
+| --- | --- |
 | `-CreateBreakGlassAccount` | Create a BreakGlass Account if no one is found |
 | `-EnableSecurityDefaults` | Enable Security defaults |
 | `-DisableSecurityDefaults` | Disable Security defaults |
+
+### Exchange Online
+
+| Argument | Description |
+| --- | --- |
+| `-AddExchangeOnlineReport` | Add a report section for Exchange Online |
+| `-SetMailboxLanguage` | Set Mailbox language and location |
 
 ### Advanced
 
