@@ -18,7 +18,7 @@
 
 - User mailbox: show, set language
 
-- Shared mailbox: show, set language, disable login
+- Shared mailbox: show, set language, disable login, enable copy to sent
 
 ## Infos
 
@@ -49,6 +49,7 @@
 | `-AddExchangeOnlineReport` | Add a report section for Exchange Online |
 | `-SetMailboxLanguage` | Set mailbox language and location |
 | `-DisableSharedMailboxLogin` | Disable direct login to shared mailbox |
+| `-EnableSharedMailboxCopyToSent` | Enable copy to sent e-mails|
 
 ### Advanced
 

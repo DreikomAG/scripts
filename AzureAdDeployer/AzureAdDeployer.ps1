@@ -11,7 +11,8 @@ Param(
     [switch]$EnableSecurityDefaults,
     [switch]$DisableSecurityDefaults,
     [switch]$SetMailboxLanguage,
-    [switch]$DisableSharedMailboxLogin
+    [switch]$DisableSharedMailboxLogin,
+    [switch]$EnableSharedMailboxCopyToSent
 )
 $Version = "1.0.0"
 $script:ExoConnected = $false
@@ -335,20 +336,25 @@ function checkConditionalAccessPolicyReport {
 
 ##TODO: https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/configure-user-consent?pivots=ms-powershell
 
-<# Shared Mailbox section #>
+<# Shared mailbox section #>
 function checkSharedMailboxReport {
     param(
         [System.Boolean]$Language,
-        [System.Boolean]$DisableLogin
+        [System.Boolean]$DisableLogin,
+        [System.Boolean]$EnableCopy
     )
-    Write-Host "Checking Shared mailboxes"
+    Write-Host "Checking shared mailboxes"
     $Mailboxes = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
     UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled
     if ($Language) { setMailboxLang -Mailbox $Mailboxes }
     if ($DisableLogin) { disableUserAccount $Mailboxes }
+    if ($EnableCopy) {
+        setSharedMailboxEnableCopyToSent $Mailboxes
+        $Mailboxes = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
+        UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled
+    }
     $MailboxReport = @()
     foreach ($Mailbox in $Mailboxes) {
-        # setSharedMailboxEnableCopyToSent $Mailbox
         $MailboxReport += checkMailboxLoginAndLocation $Mailbox
     }
     return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
@@ -371,16 +377,16 @@ function setSharedMailboxEnableCopyToSent {
     param(
         $Mailbox
     )
-    Write-Host "Enable shared mailboxes copy for sent as"
+    Write-Host "Enable shared mailbox copy to sent"
     $Mailbox | Set-Mailbox -MessageCopyForSentAsEnabled $True -MessageCopyForSendOnBehalfEnabled $True
 }
 
-<# User Mailbox section #>
+<# User mailbox section #>
 function checkMailboxReport {
     param(
         [System.Boolean]$Language
     )
-    Write-Host "Checking User mailboxes"
+    Write-Host "Checking user mailboxes"
     $Mailboxes = Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize:Unlimited -Properties DisplayName, UserPrincipalName
     if ($Language) {
         setMailboxLang -Mailbox $Mailboxes
@@ -430,7 +436,7 @@ $Report += checkConditionalAccessPolicyReport
 if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLogin) {
     $Report += "<br><h2>Exchange Online security settings</h2>"
     $Report += checkMailboxReport -Language $SetMailboxLanguage
-    $Report += checkSharedMailboxReport -Language $SetMailboxLanguage -DisableLogin $DisableSharedMailboxLogin
+    $Report += checkSharedMailboxReport -Language $SetMailboxLanguage -DisableLogin $DisableSharedMailboxLogin -EnableCopy $EnableSharedMailboxCopyToSent
 }
 
 if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
