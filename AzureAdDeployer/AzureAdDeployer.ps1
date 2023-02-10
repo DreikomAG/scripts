@@ -14,6 +14,7 @@ Param(
 $Version = "1.0.0"
 $script:ExoConnected = $false
 $script:GraphConnected = $false
+$script:InteractiveMode = $false
 
 Write-Host "AzureAdDeployer version " $Version
 
@@ -23,6 +24,18 @@ $ReportTitle = "Security report"
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 
 $PostContentHtml = "<p id='CreationDate'>Creation date: $(Get-Date)</p>"
+
+<# Interactive inputs section #>
+function CheckInteractiveMode {
+    Param(
+        $Parameters
+    )
+    if ($Parameters.Count) {
+        return
+    }
+    Write-Host "Interactive mode active"
+    $script:InteractiveMode = $true
+}
 
 <# Install modules section #>
 function installEXO {
@@ -110,7 +123,7 @@ function checkUserAccountStatus {
     return (Get-MgUser -UserId $UserId -Property AccountEnabled).AccountEnabled
 }
 
- <# BreakGlass account Section #>
+<# BreakGlass account Section #>
 function checkBreakGlassAccountReport {
     param (
         $Create
@@ -153,12 +166,12 @@ function createBreakGlassAccount {
     Write-Host "Creating BreakGlass account:"
     $Name = -join ((97..122) | Get-Random -Count 64 | % { [char]$_ })
     $DisplayName = "BreakGlass $Name"
-    $Domain = (Get-MgDomain -Property id, IsInitial | Where-Object {$_.IsInitial -eq $true}).Id
+    $Domain = (Get-MgDomain -Property id, IsInitial | Where-Object { $_.IsInitial -eq $true }).Id
     $UPN = "$Name@$Domain"
     $PasswordProfile = @{
-        ForceChangePasswordNextSignIn = $false
+        ForceChangePasswordNextSignIn        = $false
         ForceChangePasswordNextSignInWithMfa = $false
-        Password = generatePassword
+        Password                             = generatePassword
     }
     $BgAccount = New-MgUser -DisplayName $DisplayName -UserPrincipalName $UPN -MailNickName $Name -PasswordProfile $PasswordProfile -PreferredLanguage "en-US" -AccountEnabled
     $DirObject = @{
@@ -169,16 +182,16 @@ function createBreakGlassAccount {
     Write-Host ($BgAccount | Select-Object -Property Id, DisplayName, UserPrincipalName, Password | Format-List | Out-String)
 }
 
-function generatePassword  {
+function generatePassword {
     param (
-        [ValidateRange(4,[int]::MaxValue)]
+        [ValidateRange(4, [int]::MaxValue)]
         [int] $length = 64,
         [int] $upper = 4,
         [int] $lower = 4,
         [int] $numeric = 4,
         [int] $special = 4
     )
-    if($upper + $lower + $numeric + $special -gt $length) {
+    if ($upper + $lower + $numeric + $special -gt $length) {
         throw "number of upper/lower/numeric/special char must be lower or equal to length"
     }
     $uCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -186,10 +199,10 @@ function generatePassword  {
     $nCharSet = "0123456789"
     $sCharSet = "/*-+,!?=()@;:._"
     $charSet = ""
-    if($upper -gt 0) { $charSet += $uCharSet }
-    if($lower -gt 0) { $charSet += $lCharSet }
-    if($numeric -gt 0) { $charSet += $nCharSet }
-    if($special -gt 0) { $charSet += $sCharSet }
+    if ($upper -gt 0) { $charSet += $uCharSet }
+    if ($lower -gt 0) { $charSet += $lCharSet }
+    if ($numeric -gt 0) { $charSet += $nCharSet }
+    if ($special -gt 0) { $charSet += $sCharSet }
     $charSet = $charSet.ToCharArray()
     $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
     $bytes = New-Object byte[]($length)
@@ -200,12 +213,12 @@ function generatePassword  {
     }
     $password = (-join $result)
     $valid = $true
-    if($upper   -gt ($password.ToCharArray() | Where-Object {$_ -cin $uCharSet.ToCharArray() }).Count) { $valid = $false }
-    if($lower   -gt ($password.ToCharArray() | Where-Object {$_ -cin $lCharSet.ToCharArray() }).Count) { $valid = $false }
-    if($numeric -gt ($password.ToCharArray() | Where-Object {$_ -cin $nCharSet.ToCharArray() }).Count) { $valid = $false }
-    if($special -gt ($password.ToCharArray() | Where-Object {$_ -cin $sCharSet.ToCharArray() }).Count) { $valid = $false }
-    if(!$valid) {
-         $password = Get-RandomPassword $length $upper $lower $numeric $special
+    if ($upper -gt ($password.ToCharArray() | Where-Object { $_ -cin $uCharSet.ToCharArray() }).Count) { $valid = $false }
+    if ($lower -gt ($password.ToCharArray() | Where-Object { $_ -cin $lCharSet.ToCharArray() }).Count) { $valid = $false }
+    if ($numeric -gt ($password.ToCharArray() | Where-Object { $_ -cin $nCharSet.ToCharArray() }).Count) { $valid = $false }
+    if ($special -gt ($password.ToCharArray() | Where-Object { $_ -cin $sCharSet.ToCharArray() }).Count) { $valid = $false }
+    if (!$valid) {
+        $password = Get-RandomPassword $length $upper $lower $numeric $special
     }
     return $password
 }
@@ -382,6 +395,14 @@ function setMailboxLang {
 }
 
 <# Script logic start section #>
+
+# CheckInteractiveMode -Parameters $PSBoundParameters
+
+# if ($script:InteractiveMode) {
+#     Write-Host "interactive test"
+#     return
+# }
+
 if ($Install) {
     Write-Host "Installing prerequisites"
     installEXO
@@ -489,4 +510,5 @@ Write-Host "Generating HTML report"
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\AzureAdDeployer-Report.html
 Invoke-Item $Desktop\AzureAdDeployer-Report.html
+# if ($script:InteractiveMode) { Read-Host "Click [ENTER] key to exit AzureAdDeployer" }
 Read-Host "Click [ENTER] key to exit AzureAdDeployer"
