@@ -2,6 +2,10 @@
 
 ## Features
 
+### General
+
+- Generates HTML report to yoor Desktop
+
 ### Azure Active Directory
 
 - BreakGlass account: create, show
@@ -15,6 +19,12 @@
 - User mailbox: show
 
 - Shared mailbox: show
+
+## Infos
+
+- No local administrator privileges required
+
+- Works on PowerShell 5.1 and PowerShell Core
 
 ## Arguments
 
@@ -39,18 +49,24 @@
 
 ## Usage
 
-Azure Active Directory HTML report:
+Note: none of the commands require local administrator privileges on the computer!
+
+### Install required PowerShell modules
+
+`.\AzureAdDeployer.ps1 -Install`
+
+### Azure Active Directory HTML report
 
 `.\AzureAdDeployer.ps1`
 
-Azure Active Directory + Exchange Online HTML report:
+### Azure Active Directory + Exchange Online HTML report
 
 `.\AzureAdDeployer.ps1 -AddExchangeOnlineReport`
 
-Create a BreakGlass account:
+### Create a BreakGlass account
 
 `.\AzureAdDeployer.ps1 -CreateBreakGlassAccount`
 
-Disable Security Defaults:
+### Disable Security Defaults
 
 `.\AzureAdDeployer.ps1 -DisableSecurityDefaults`
