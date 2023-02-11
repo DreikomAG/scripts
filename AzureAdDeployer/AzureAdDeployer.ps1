@@ -113,6 +113,14 @@ function disconnectGraph {
     $script:GraphConnected = $false
 }
 
+<# Gernal infos#>
+
+##TODO: Get Customer Infos: Get-MgOrganization
+
+##TODO: SKU? Get-MgSubscribedSku
+
+##TODO: Enable SSPR: https://learn.microsoft.com/en-us/graph/api/resources/authorizationpolicy?view=graph-rest-1.0
+
 <# User Account section #>
 function disableUserAccount {
     param (
