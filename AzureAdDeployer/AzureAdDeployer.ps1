@@ -25,7 +25,10 @@ Write-Host "AzureAdDeployer version " $Version
 
 $Desktop = [Environment]::GetFolderPath("Desktop")
 
-$ReportTitle = "Security report"
+$ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
+
+$ReportTitle = "M365 Security Report"
+# $ReportTitleHtml = "<div class='header'><h1>" + $ReportTitle + "</h1><img src='" + $ReportImageUrl + "' width='25' height='25'></div>"
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 
 $PostContentHtml = "<p id='CreationDate'>Creation date: $(Get-Date)</p>"
@@ -428,13 +431,13 @@ if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLo
 
 $Report = @()
 
-$Report += "<br><h2>Azure Active Directory security settings</h2>"
+$Report += "<br><hr><h2>Azure Active Directory</h2>"
 $Report += checkBreakGlassAccountReport -Create $CreateBreakGlassAccount
 $Report += checkSecurityDefaultsReport -Enable $EnableSecurityDefaults -Disable $DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
 
 if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLogin) {
-    $Report += "<br><h2>Exchange Online security settings</h2>"
+    $Report += "<br><hr><h2>Exchange Online</h2>"
     $Report += checkMailboxReport -Language $SetMailboxLanguage
     $Report += checkSharedMailboxReport -Language $SetMailboxLanguage -DisableLogin $DisableSharedMailboxLogin -EnableCopy $EnableSharedMailboxCopyToSent
 }
@@ -449,71 +452,84 @@ if ($script:GraphConnected -and (-not $KeepGraphSessionAlive)) {
 
 <# CSS styles section #>
 $Header = @"
+<title>$($ReportTitle)</title>
+<link rel="icon" type="image/png" href="$($ReportImageUrl)">
 <style>
+html {
+    display: table;
+    margin: auto;
+}
+body {
+    display: table-cell;
+    vertical-align: middle;
+}
 h1 {
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
     font-size: 32px;
 }
-
 h2 {
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
     font-size: 24px;
 }
-
 h3 {
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
     font-size: 16px;
     
 }
-
 p {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 12px;
 }
-
 table {
     font-size: 12px;
     border: 0px;
     font-family: Arial, Helvetica, sans-serif;
 }
-
 td {
     padding: 4px;
     margin: 0px;
     border: 0;
 }
-
 th {
     background: #666666;
     color: #fff;
     font-size: 11px;
-    text-transform: uppercase;
     padding: 10px 15px;
     vertical-align: middle;
 }
-
 tbody tr:nth-child(even) {
     background: #f0f0f2;
 }
 
 #CreationDate {
-
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
     font-size: 12px;
 }
-
-.StopStatus {
-
-    color: #ff0000;
+table {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }
-
-.RunningStatus {
-    
-    color: #008000;
+thead tr {
+    color: #ffffff;
+    text-align: left;
+}
+th,
+td {
+    padding: 12px 15px;
+}
+tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
 }
 </style>
 "@
