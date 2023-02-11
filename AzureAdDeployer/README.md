@@ -83,3 +83,9 @@ Note: none of the commands require local administrator privileges on the compute
 ### Disable Security Defaults
 
 `.\AzureAdDeployer.ps1 -DisableSecurityDefaults`
+
+## Credits
+
+### Icons
+
+- <a href="https://www.flaticon.com/free-icons/error" title="error icons">Error icons created by Smashicons - Flaticon</a>
