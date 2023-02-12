@@ -84,6 +84,26 @@ Note: none of the commands require local administrator privileges on the compute
 
 `.\AzureAdDeployer.ps1 -DisableSecurityDefaults`
 
+## ToDo
+
+- Add an interactive script mode
+
+- Manage Self-service Password Reset
+
+- Create default Conditinal Access polices
+
+- List verified Domains
+
+- Manage Enterprise Applicatin registration restrictions
+
+- List all global admins
+
+- List MFA setup for global admins
+
+- Manage default application protectin policy for iOS and Android
+
+- List unused licenses
+
 ## Credits
 
 ### Icons
