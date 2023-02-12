@@ -113,9 +113,12 @@ function disconnectGraph {
     $script:GraphConnected = $false
 }
 
-<# Gernal infos#>
+<# Customer infos#>
+function organizationReport {
+    return Get-MgOrganization -Property DisplayName, Id | ConvertTo-HTML -Property DisplayName, Id -As Table -Fragment
+}
 
-##TODO: Get Customer Infos: Get-MgOrganization
+<# Gernal infos#>
 
 ##TODO: SKU? Get-MgSubscribedSku
 
@@ -439,6 +442,7 @@ if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLo
 
 $Report = @()
 
+$Report += organizationReport
 $Report += "<br><hr><h2>Azure Active Directory</h2>"
 $Report += checkBreakGlassAccountReport -Create $CreateBreakGlassAccount
 $Report += checkSecurityDefaultsReport -Enable $EnableSecurityDefaults -Disable $DisableSecurityDefaults
