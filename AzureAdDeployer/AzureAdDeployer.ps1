@@ -404,6 +404,14 @@ function getAppProtectionPolices {
     return @($IOSPolicies, $AndroidPolicies)
 }
 
+# function createAndroidAppProtectionPolicy {
+#     $Body = @{
+#         "@odata.type" = "#microsoft.graph.androidManagedAppProtection"
+#         displayName = "Test"
+#     }
+#     New-MgDeviceAppManagementAndroidManagedAppProtection -BodyParameter $Body
+# }
+
 <# Enterprise Application section #>
 
 ##TODO: https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/configure-user-consent?pivots=ms-powershell
