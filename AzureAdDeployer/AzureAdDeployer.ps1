@@ -82,14 +82,14 @@ function InteractiveMenu {
         Write-Host $Status
         $result = $host.ui.PromptForChoice($Title, $Message, $Options, $StartOptionValue)
         switch ($result) {
-            0 {"Starting AzureAdDeployer"}
-            1 {$script:AddExchangeOnlineReport = ! $script:AddExchangeOnlineReport}
-            2 {$script:CreateBreakGlassAccount = ! $script:CreateBreakGlassAccount}
-            3 {$script:EnableSecurityDefaults = ! $script:EnableSecurityDefaults}
-            4 {$script:DisableSecurityDefaults = ! $script:DisableSecurityDefaults}
-            5 {$script:SetMailboxLanguage = ! $script:SetMailboxLanguage}
-            6 {$script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin}
-            7 {$script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent}
+            0 { "Starting AzureAdDeployer" }
+            1 { $script:AddExchangeOnlineReport = ! $script:AddExchangeOnlineReport }
+            2 { $script:CreateBreakGlassAccount = ! $script:CreateBreakGlassAccount }
+            3 { $script:EnableSecurityDefaults = ! $script:EnableSecurityDefaults }
+            4 { $script:DisableSecurityDefaults = ! $script:DisableSecurityDefaults }
+            5 { $script:SetMailboxLanguage = ! $script:SetMailboxLanguage }
+            6 { $script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin }
+            7 { $script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent }
         }
     }
 }
@@ -128,7 +128,7 @@ function connectGraph {
         Write-Host "Connecting to Graph"
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
         User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
-        RoleManagement.ReadWrite.Directory"
+        RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All"
     }
     $script:GraphConnected = $true
 }
@@ -194,7 +194,7 @@ function checkBreakGlassAccountReport {
         $Create
     )
     if ($BgAccount = getBreakGlassAccount) {
-        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account found</h3>"
+        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account</h3>"
     }
     if ($create) {
         createBreakGlassAccount
@@ -327,7 +327,7 @@ function getConditionalAccessPolicy {
 
 function checkConditionalAccessPolicyReport {
     if ($Policy = getConditionalAccessPolicy) {
-        return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access policies found</h3>"
+        return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access policies</h3>"
     }
     return "<br><h3>Conditional Access policies not found</h3>"
 }
@@ -388,6 +388,21 @@ function checkConditionalAccessPolicyReport {
 #     }
 #     New-MgIdentityConditionalAccessPolicy -BodyParameter $params
 # }
+
+<# Application protection polices section#>
+function checkAppProtectionPolicesReport {
+    Write-Host "Checking App protection policies"
+    if ($Polices = getAppProtectionPolices) {
+        return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3>App protection policies</h3>"
+    }
+    return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3>App protection policies not found</h3>"
+}
+
+function getAppProtectionPolices {
+    $IOSPolicies = Get-MgDeviceAppManagementiOSManagedAppProtection -Property DisplayName, IsAssigned
+    $AndroidPolicies = Get-MgDeviceAppManagementAndroidManagedAppProtection -Property DisplayName, IsAssigned
+    return @($IOSPolicies, $AndroidPolicies)
+}
 
 <# Enterprise Application section #>
 
@@ -489,6 +504,7 @@ $Report += "<br><hr><h2>Azure Active Directory</h2>"
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
 $Report += checkSecurityDefaultsReport -Enable $script:EnableSecurityDefaults -Disable $script:DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
+$Report += checkAppProtectionPolicesReport
 
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent) {
     $Report += "<br><hr><h2>Exchange Online</h2>"

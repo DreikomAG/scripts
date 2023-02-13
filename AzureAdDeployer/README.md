@@ -16,6 +16,8 @@
 
 - Conditional Access policies: show
 
+- App protection policies: show
+
 ### Exchange Online
 
 - User mailbox: show, set language
