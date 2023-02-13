@@ -6,6 +6,8 @@
 
 - Generates a HTML report to your Desktop called `AzureAdDeployer-Report.html`
 
+- Interactive console GUI
+
 ### Azure Active Directory
 
 - BreakGlass account: show, create
@@ -68,7 +70,7 @@ Note: none of the commands require local administrator privileges on the compute
 
 `.\AzureAdDeployer.ps1 -Install`
 
-### Azure Active Directory HTML report
+### Interactive GUI
 
 `.\AzureAdDeployer.ps1`
 
@@ -85,8 +87,6 @@ Note: none of the commands require local administrator privileges on the compute
 `.\AzureAdDeployer.ps1 -DisableSecurityDefaults`
 
 ## ToDo
-
-- Add an interactive script mode
 
 - Manage Self-service Password Reset
 
