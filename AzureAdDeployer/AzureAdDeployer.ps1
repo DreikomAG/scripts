@@ -21,6 +21,14 @@ $script:InteractiveMode = $false
 $script:MailboxLanguageCode = "de-CH"
 $script:MailboxTimeZone = "W. Europe Standard Time" 
 
+$script:CreateBreakGlassAccount = $CreateBreakGlassAccount
+$script:EnableSecurityDefaults = $EnableSecurityDefaults
+$script:DisableSecurityDefaults = $DisableSecurityDefaults
+$script:SetMailboxLanguage = $SetMailboxLanguage
+$script:DisableSharedMailboxLogin = $DisableSharedMailboxLogin
+$script:EnableSharedMailboxCopyToSent = $EnableSharedMailboxCopyToSent
+$script:AddExchangeOnlineReport = $AddExchangeOnlineReport
+
 Write-Host "AzureAdDeployer version " $Version
 
 $Desktop = [Environment]::GetFolderPath("Desktop")
@@ -43,6 +51,47 @@ function CheckInteractiveMode {
     }
     Write-Host "Interactive mode active"
     $script:InteractiveMode = $true
+}
+
+function InteractiveMenu {
+    $StartOptionValue = 0
+    $script:AddExchangeOnlineReport = $true
+    while ($result -ne $StartOptionValue) {
+        $Title = ""
+        $Message = ""
+        $Status = @"
+1: Add Exchange Online report: $($script:AddExchangeOnlineReport)
+2: Create BreakGlass account: $($script:CreateBreakGlassAccount)
+3: Enable Security Defaults: $($script:EnableSecurityDefaults)
+4: Disable Security Defaults: $($script:DisableSecurityDefaults)
+5: Set mailbox language: $($script:SetMailboxLanguage)
+6: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
+7: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
+0: Start
+"@
+        $StartOption = New-Object System.Management.Automation.Host.ChoiceDescription "&0", "Start"
+        $AddExchangeOnlineReportOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1", "Add Exchange Online report"
+        $CreateBreakGlassAccountOption = New-Object System.Management.Automation.Host.ChoiceDescription "&2", "Create BreakGlass account"
+        $EnableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&3", "Enable Security Defaults"
+        $DisableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&4", "Disable Security Defaults"
+        $SetMailboxLanguageOption = New-Object System.Management.Automation.Host.ChoiceDescription "&5", "Set mailbox language"
+        $DisableSharedMailboxLoginOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Disable shared mailbox login"
+        $EnableSharedMailboxCopyToSentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Enable shared mailbox copy to sent"
+
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $AddExchangeOnlineReportOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption)
+        Write-Host $Status
+        $result = $host.ui.PromptForChoice($Title, $Message, $Options, $StartOptionValue)
+        switch ($result) {
+            0 {"Starting AzureAdDeployer"}
+            1 {$script:AddExchangeOnlineReport = ! $script:AddExchangeOnlineReport}
+            2 {$script:CreateBreakGlassAccount = ! $script:CreateBreakGlassAccount}
+            3 {$script:EnableSecurityDefaults = ! $script:EnableSecurityDefaults}
+            4 {$script:DisableSecurityDefaults = ! $script:DisableSecurityDefaults}
+            5 {$script:SetMailboxLanguage = ! $script:SetMailboxLanguage}
+            6 {$script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin}
+            7 {$script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent}
+        }
+    }
 }
 
 <# Install modules section #>
@@ -151,7 +200,7 @@ function checkBreakGlassAccountReport {
         createBreakGlassAccount
         return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account created</h3><p>Check console log for credentials</p>"
     }
-    return "<h3>BreakGlass account not found</h3><p>Create account with <code> -CreateBreakGlassAccount </code></p>"
+    return "<h3>BreakGlass account not found</h3>>"
 }
 
 function getBreakGlassAccount {
@@ -404,7 +453,7 @@ function checkMailboxReport {
         $MailboxReport += checkMailboxLoginAndLocation $Mailbox
     }
     return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, LoginAllowed `
-        -Fragment -PreContent "<h3>User mailbox report</h3> <p>Set language with <code> -SetMailboxLanguage </code></p>"
+        -Fragment -PreContent "<h3>User mailbox report</h3>"
 }
 
 function setMailboxLang {
@@ -417,12 +466,11 @@ function setMailboxLang {
 
 <# Script logic start section #>
 
-# CheckInteractiveMode -Parameters $PSBoundParameters
+CheckInteractiveMode -Parameters $PSBoundParameters
 
-# if ($script:InteractiveMode) {
-#     Write-Host "interactive test"
-#     return
-# }
+if ($script:InteractiveMode) {
+    InteractiveMenu
+}
 
 if ($Install) {
     Write-Host "Installing prerequisites"
@@ -432,20 +480,20 @@ if ($Install) {
 }
 
 connectGraph
-if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLogin) { connectExo }
+if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent) { connectExo }
 
 $Report = @()
 
 $Report += organizationReport
 $Report += "<br><hr><h2>Azure Active Directory</h2>"
-$Report += checkBreakGlassAccountReport -Create $CreateBreakGlassAccount
-$Report += checkSecurityDefaultsReport -Enable $EnableSecurityDefaults -Disable $DisableSecurityDefaults
+$Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
+$Report += checkSecurityDefaultsReport -Enable $script:EnableSecurityDefaults -Disable $script:DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
 
-if ($AddExchangeOnlineReport -or $SetMailboxLanguage -or $DisableSharedMailboxLogin) {
+if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent) {
     $Report += "<br><hr><h2>Exchange Online</h2>"
-    $Report += checkMailboxReport -Language $SetMailboxLanguage
-    $Report += checkSharedMailboxReport -Language $SetMailboxLanguage -DisableLogin $DisableSharedMailboxLogin -EnableCopy $EnableSharedMailboxCopyToSent
+    $Report += checkMailboxReport -Language $script:SetMailboxLanguage
+    $Report += checkSharedMailboxReport -Language $script:SetMailboxLanguage -DisableLogin $script:DisableSharedMailboxLogin -EnableCopy $script:EnableSharedMailboxCopyToSent
 }
 
 if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
@@ -545,5 +593,4 @@ Write-Host "Generating HTML report"
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\AzureAdDeployer-Report.html
 Invoke-Item $Desktop\AzureAdDeployer-Report.html
-# if ($script:InteractiveMode) { Read-Host "Click [ENTER] key to exit AzureAdDeployer" }
-Read-Host "Click [ENTER] key to exit AzureAdDeployer"
+if ($script:InteractiveMode) { Read-Host "Click [ENTER] key to exit AzureAdDeployer" }
