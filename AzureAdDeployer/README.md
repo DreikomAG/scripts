@@ -60,7 +60,7 @@
 | `-AddExchangeOnlineReport` | Add a report section for Exchange Online |
 | `-SetMailboxLanguage` | Set mailbox language and location |
 | `-DisableSharedMailboxLogin` | Disable direct login to shared mailbox |
-| `-EnableSharedMailboxCopyToSent` | Enable copy to sent e-mails |
+| `-EnableSharedMailboxCopyToSent` | Enable shared mailbox copy to sent e-mails |
 | `-HideUnifiedMailboxFromOutlookClient` | Hide unified mailbox from outlook client |
 
 ### Advanced
