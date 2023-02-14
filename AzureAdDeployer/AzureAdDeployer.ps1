@@ -401,7 +401,10 @@ function checkAppProtectionPolicesReport {
 function getAppProtectionPolices {
     $IOSPolicies = Get-MgDeviceAppManagementiOSManagedAppProtection -Property DisplayName, IsAssigned
     $AndroidPolicies = Get-MgDeviceAppManagementAndroidManagedAppProtection -Property DisplayName, IsAssigned
-    return @($IOSPolicies, $AndroidPolicies)
+    $Policies = @()
+    $Policies += $IOSPolicies
+    $Policies += $AndroidPolicies
+    return $Policies
 }
 
 # function createAndroidAppProtectionPolicy {
