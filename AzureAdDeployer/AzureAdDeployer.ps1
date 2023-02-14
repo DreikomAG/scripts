@@ -10,6 +10,7 @@ Param(
     [switch]$CreateBreakGlassAccount,
     [switch]$EnableSecurityDefaults,
     [switch]$DisableSecurityDefaults,
+    [switch]$DisableEnterpiseApplicationUserConsent,
     [switch]$SetMailboxLanguage,
     [switch]$DisableSharedMailboxLogin,
     [switch]$EnableSharedMailboxCopyToSent
@@ -24,6 +25,7 @@ $script:MailboxTimeZone = "W. Europe Standard Time"
 $script:CreateBreakGlassAccount = $CreateBreakGlassAccount
 $script:EnableSecurityDefaults = $EnableSecurityDefaults
 $script:DisableSecurityDefaults = $DisableSecurityDefaults
+$script:DisableEnterpiseApplicationUserConsent = $DisableEnterpiseApplicationUserConsent
 $script:SetMailboxLanguage = $SetMailboxLanguage
 $script:DisableSharedMailboxLogin = $DisableSharedMailboxLogin
 $script:EnableSharedMailboxCopyToSent = $EnableSharedMailboxCopyToSent
@@ -64,9 +66,10 @@ function InteractiveMenu {
 2: Create BreakGlass account: $($script:CreateBreakGlassAccount)
 3: Enable Security Defaults: $($script:EnableSecurityDefaults)
 4: Disable Security Defaults: $($script:DisableSecurityDefaults)
-5: Set mailbox language: $($script:SetMailboxLanguage)
-6: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
-7: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
+5: Disable Enterprise Application user consent: $($script:DisableEnterpiseApplicationUserConsent)
+6: Set mailbox language: $($script:SetMailboxLanguage)
+7: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
+8: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
 0: Start
 "@
         $StartOption = New-Object System.Management.Automation.Host.ChoiceDescription "&0", "Start"
@@ -74,11 +77,12 @@ function InteractiveMenu {
         $CreateBreakGlassAccountOption = New-Object System.Management.Automation.Host.ChoiceDescription "&2", "Create BreakGlass account"
         $EnableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&3", "Enable Security Defaults"
         $DisableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&4", "Disable Security Defaults"
-        $SetMailboxLanguageOption = New-Object System.Management.Automation.Host.ChoiceDescription "&5", "Set mailbox language"
-        $DisableSharedMailboxLoginOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Disable shared mailbox login"
-        $EnableSharedMailboxCopyToSentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Enable shared mailbox copy to sent"
+        $DisableEnterpiseApplicationUserConsentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&5", "Disable Enterprise Application user consent"
+        $SetMailboxLanguageOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Set mailbox language"
+        $DisableSharedMailboxLoginOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Disable shared mailbox login"
+        $EnableSharedMailboxCopyToSentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&8", "Enable shared mailbox copy to sent"
 
-        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $AddExchangeOnlineReportOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption)
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $AddExchangeOnlineReportOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption)
         Write-Host $Status
         $result = $host.ui.PromptForChoice($Title, $Message, $Options, $StartOptionValue)
         switch ($result) {
@@ -87,9 +91,10 @@ function InteractiveMenu {
             2 { $script:CreateBreakGlassAccount = ! $script:CreateBreakGlassAccount }
             3 { $script:EnableSecurityDefaults = ! $script:EnableSecurityDefaults }
             4 { $script:DisableSecurityDefaults = ! $script:DisableSecurityDefaults }
-            5 { $script:SetMailboxLanguage = ! $script:SetMailboxLanguage }
-            6 { $script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin }
-            7 { $script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent }
+            5 { $script:DisableEnterpiseApplicationUserConsent = ! $script:DisableEnterpiseApplicationUserConsent }
+            6 { $script:SetMailboxLanguage = ! $script:SetMailboxLanguage }
+            7 { $script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin }
+            8 { $script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent }
         }
     }
 }
@@ -100,7 +105,6 @@ function installEXO {
         Write-Host "Updating PowerShell Exchange Online module"
         Update-Module -Name ExchangeOnlineManagement -Scope CurrentUser -Force
     }
-
     if (-not (Get-Module -Name ExchangeOnlineManagement -ListAvailable)) {
         Write-Host "Installing PowerShell Exchange Online module"
         Install-Module -Name ExchangeOnlineManagement -Scope CurrentUser -Force
@@ -112,7 +116,6 @@ function installGraph {
         Write-Host "Updating PowerShell Graph SDK module"
         Update-Module -Name Microsoft.Graph -Scope CurrentUser -Force
     }
-
     if (-not (Get-Module -Name Microsoft.Graph -ListAvailable)) {
         Write-Host "Installing PowerShell Graph SDK module"
         Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force
@@ -128,11 +131,11 @@ function connectGraph {
         Write-Host "Connecting to Graph"
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
         User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
-        RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All"
+        RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
+        Policy.ReadWrite.Authorization"
     }
     $script:GraphConnected = $true
 }
-
 function connectExo {
     if ($UseExistingExoSession) { return }
     if (-not $script:ExoConnected) {
@@ -152,7 +155,6 @@ function disconnectExo {
     }
     $script:ExoConnected = $false
 }
-
 function disconnectGraph {
     if ($UseExistingGraphSession) { return }
     if ($script:GraphConnected) {
@@ -164,7 +166,8 @@ function disconnectGraph {
 
 <# Customer infos#>
 function organizationReport {
-    return Get-MgOrganization -Property DisplayName, Id | ConvertTo-HTML -Property DisplayName, Id -As Table -Fragment
+    $Organization = Get-MgOrganization -Property DisplayName, Id
+    return  "<h2>$($Organization.DisplayName) ($($Organization.Id))</h2>"
 }
 
 <# User Account section #>
@@ -180,7 +183,6 @@ function disableUserAccount {
         Update-MgUser -UserId $User.UserPrincipalName -BodyParameter $params
     }
 }
-
 function checkUserAccountStatus {
     param(
         $UserId
@@ -198,11 +200,10 @@ function checkBreakGlassAccountReport {
     }
     if ($create) {
         createBreakGlassAccount
-        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account created</h3><p>Check console log for credentials</p>"
+        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account</h3><p>Check console log for credentials</p>"
     }
-    return "<h3>BreakGlass account not found</h3>"
+    return "<h3>BreakGlass account</h3><p>Not found</p>"
 }
-
 function getBreakGlassAccount {
     Write-Host "Checking BreakGlass account"
     $BgAccounts = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
@@ -212,11 +213,9 @@ function getBreakGlassAccount {
     }
     return $BgAccounts
 }
-
 function getGlobalAdminRoleId {
     return (Get-MgDirectoryRole -Filter "DisplayName eq 'Global Administrator'" -Property Id).Id
 }
-
 function checkGlobalAdminRole {
     param (
         $AccountId
@@ -225,7 +224,6 @@ function checkGlobalAdminRole {
         return $true
     }
 }
-
 function createBreakGlassAccount {
     Write-Host "Creating BreakGlass account:"
     $Name = -join ((97..122) | Get-Random -Count 64 | ForEach-Object { [char]$_ })
@@ -245,7 +243,6 @@ function createBreakGlassAccount {
     Add-Member -InputObject $BgAccount -NotePropertyName "Password" -NotePropertyValue $PasswordProfile.Password
     Write-Host ($BgAccount | Select-Object -Property Id, DisplayName, UserPrincipalName, Password | Format-List | Out-String)
 }
-
 function generatePassword {
     param (
         [ValidateRange(4, [int]::MaxValue)]
@@ -300,16 +297,14 @@ function checkSecurityDefaultsReport {
         updateSecurityDefaults -Enable $false
     }
     if (checkSecurityDefaults) {
-        return "<br><h3>Security Defaults enabled</h3>"
+        return "<br><h3>Security Defaults</h3><p>Enabled</p>"
     }
-    return "<br><h3>Security Defaults disabled</h3>"
+    return "<br><h3>Security Defaults</h3><p>Disabled</p>"
 }
-
 function checkSecurityDefaults {
     Write-Host "Checking Security Defaults"
     return (Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy -Property "isEnabled").IsEnabled
 }
-
 function updateSecurityDefaults {
     param ([System.Boolean]$Enable)
     $params = @{
@@ -324,12 +319,11 @@ function getConditionalAccessPolicy {
     Write-Host "Checking Conditional Access policies"
     return Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName, State
 }
-
 function checkConditionalAccessPolicyReport {
     if ($Policy = getConditionalAccessPolicy) {
         return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access policies</h3>"
     }
-    return "<br><h3>Conditional Access policies not found</h3>"
+    return "<br><h3>Conditional Access policies</h3><p>Not found</p>"
 }
 
 # function deleteConditionalAccessPolicy {
@@ -395,9 +389,8 @@ function checkAppProtectionPolicesReport {
     if ($Polices = getAppProtectionPolices) {
         return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3>App protection policies</h3>"
     }
-    return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3>App protection policies not found</h3>"
+    return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3>App protection policies</h3><p>Not found</p>"
 }
-
 function getAppProtectionPolices {
     $IOSPolicies = Get-MgDeviceAppManagementiOSManagedAppProtection -Property DisplayName, IsAssigned
     $AndroidPolicies = Get-MgDeviceAppManagementAndroidManagedAppProtection -Property DisplayName, IsAssigned
@@ -406,7 +399,6 @@ function getAppProtectionPolices {
     $Policies += $AndroidPolicies
     return $Policies
 }
-
 # function createAndroidAppProtectionPolicy {
 #     $Body = @{
 #         "@odata.type" = "#microsoft.graph.androidManagedAppProtection"
@@ -416,8 +408,27 @@ function getAppProtectionPolices {
 # }
 
 <# Enterprise Application section #>
-
-##TODO: https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/configure-user-consent?pivots=ms-powershell
+function checkApplicationConsentPolicyReport {
+    param(
+        [System.Boolean]$DisableUserConsent
+    )
+    if ($DisableUserConsent) { disableApplicationUserConsent }
+    Write-Host "Checking Enterprise Application consent policy"
+    $Policy = (Get-MgPolicyAuthorizationPolicy -Property DefaultUserRolePermissions).DefaultUserRolePermissions.PermissionGrantPoliciesAssigned
+    if ($Policy -eq "ManagePermissionGrantsForSelf.microsoft-user-default-legacy" ) {
+        return "<br><h3>Enterprise Application user consent policy</h3><p>Allow user consent for all apps: $($Policy)</p>"
+    }  
+    if ($Policy -eq "ManagePermissionGrantsForSelf.microsoft-user-default-low" ) {
+        return "<br><h3>Enterprise Application user consent policy</h3><p>Allow user consent for well known apps: $($Policy)</p>"
+    }
+    return "<br><h3>Enterprise Application user consent policy</h3><p>Do not allow user consent</p>"
+}
+function disableApplicationUserConsent {
+    Write-Host "Disable Enterprise Application user consent"
+    Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{
+        "PermissionGrantPoliciesAssigned" = @() 
+    }
+}
 
 <# Shared mailbox section #>
 function checkSharedMailboxReport {
@@ -444,7 +455,6 @@ function checkSharedMailboxReport {
     MessageCopyForSendOnBehalfEnabled, LoginAllowed `
         -Fragment -PreContent "<br><h3>Shared mailbox report</h3>"
 }
-
 function checkMailboxLoginAndLocation {
     param (
         $Mailbox
@@ -455,7 +465,6 @@ function checkMailboxLoginAndLocation {
     Add-Member -InputObject $Mailbox -NotePropertyName "LoginAllowed" -NotePropertyValue (checkUserAccountStatus $Mailbox.UserPrincipalName)
     return $Mailbox
 }
-
 function setSharedMailboxEnableCopyToSent {
     param(
         $Mailbox
@@ -481,7 +490,6 @@ function checkMailboxReport {
     return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, LoginAllowed `
         -Fragment -PreContent "<h3>User mailbox report</h3>"
 }
-
 function setMailboxLang {
     param(
         $Mailbox
@@ -491,9 +499,7 @@ function setMailboxLang {
 }
 
 <# Script logic start section #>
-
 CheckInteractiveMode -Parameters $PSBoundParameters
-
 if ($script:InteractiveMode) {
     InteractiveMenu
 }
@@ -509,24 +515,22 @@ connectGraph
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent) { connectExo }
 
 $Report = @()
-
 $Report += organizationReport
 $Report += "<br><hr><h2>Azure Active Directory</h2>"
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
 $Report += checkSecurityDefaultsReport -Enable $script:EnableSecurityDefaults -Disable $script:DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
 $Report += checkAppProtectionPolicesReport
+$Report += checkApplicationConsentPolicyReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent
 
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent) {
     $Report += "<br><hr><h2>Exchange Online</h2>"
     $Report += checkMailboxReport -Language $script:SetMailboxLanguage
     $Report += checkSharedMailboxReport -Language $script:SetMailboxLanguage -DisableLogin $script:DisableSharedMailboxLogin -EnableCopy $script:EnableSharedMailboxCopyToSent
 }
-
 if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
     disconnectExo
 }
-
 if ($script:GraphConnected -and (-not $KeepGraphSessionAlive)) {
     disconnectGraph
 }
@@ -562,17 +566,23 @@ h3 {
 }
 p {
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 12px;
+    font-size: 14px
 }
 table {
-    font-size: 12px;
+    font-size: 14px;
     border: 0px;
     font-family: Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    margin: 25px 0;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }
+th,
 td {
     padding: 4px;
     margin: 0px;
     border: 0;
+    padding: 12px 15px;
 }
 th {
     background: #666666;
@@ -584,33 +594,20 @@ th {
 tbody tr:nth-child(even) {
     background: #f0f0f2;
 }
-
-#CreationDate {
-    font-family: Arial, Helvetica, sans-serif;
-    color: #666666;
-    font-size: 12px;
-}
-table {
-    border-collapse: collapse;
-    margin: 25px 0;
-    font-size: 0.9em;
-    font-family: sans-serif;
-    min-width: 400px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-}
 thead tr {
     color: #ffffff;
     text-align: left;
-}
-th,
-td {
-    padding: 12px 15px;
 }
 tbody tr {
     border-bottom: 1px solid #dddddd;
 }
 tbody tr:nth-of-type(even) {
     background-color: #f3f3f3;
+}
+#CreationDate {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #666666;
+    font-size: 12px;
 }
 </style>
 "@
@@ -620,4 +617,4 @@ Write-Host "Generating HTML report"
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\AzureAdDeployer-Report.html
 Invoke-Item $Desktop\AzureAdDeployer-Report.html
-if ($script:InteractiveMode) { Read-Host "Click [ENTER] key to exit AzureAdDeployer" }
+if ($script:InteractiveMode -and $script:CreateBreakGlassAccount) { Read-Host "Click [ENTER] key to exit AzureAdDeployer" }

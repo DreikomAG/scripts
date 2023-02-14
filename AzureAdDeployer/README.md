@@ -18,6 +18,8 @@
 
 - App protection policies: show
 
+- Enterprise Application user consent: show, disable
+
 ### Exchange Online
 
 - User mailbox: show, set language
@@ -45,6 +47,7 @@
 | `-CreateBreakGlassAccount` | Create a BreakGlass Account if no one is found |
 | `-EnableSecurityDefaults` | Enable Security defaults |
 | `-DisableSecurityDefaults` | Disable Security defaults |
+| `-DisableEnterpiseApplicationUserConsent` | Disable Enterprise Application user consent |
 
 ### Exchange Online
 
