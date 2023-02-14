@@ -401,7 +401,7 @@ function checkAppProtectionPolicesReport {
     if ($Polices = getAppProtectionPolices) {
         return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3>App protection policies</h3>"
     }
-    return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3>App protection policies</h3><p>Not found</p>"
+    return "<br><h3>App protection policies</h3><p>Not found</p>"
 }
 function getAppProtectionPolices {
     $IOSPolicies = Get-MgDeviceAppManagementiOSManagedAppProtection -Property DisplayName, IsAssigned
