@@ -5,8 +5,11 @@ Param(
     [switch]$UseExistingExoSession,   
     [switch]$KeepExoSessionAlive,    
     [switch]$UseExistingGraphSession,
-    [switch]$KeepGraphSessionAlive,
+    [switch]$KeepGraphSessionAlive,  
+    [switch]$UseExistingSpoSession,
+    [switch]$KeepSpoSessionAlive,
     [switch]$AddExchangeOnlineReport,
+    [switch]$AddSharePointOnlineReport,
     [switch]$CreateBreakGlassAccount,
     [switch]$EnableSecurityDefaults,
     [switch]$DisableSecurityDefaults,
@@ -14,12 +17,15 @@ Param(
     [switch]$SetMailboxLanguage,
     [switch]$DisableSharedMailboxLogin,
     [switch]$EnableSharedMailboxCopyToSent,
-    [switch]$HideUnifiedMailboxFromOutlookClient
+    [switch]$HideUnifiedMailboxFromOutlookClient,
+    [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
 $Version = "2.0.0"
 $script:ExoConnected = $false
 $script:GraphConnected = $false
+$script:SpoConnected = $false
+
 $script:InteractiveMode = $false
 $script:MailboxLanguageCode = "de-CH"
 $script:MailboxTimeZone = "W. Europe Standard Time" 
@@ -32,9 +38,12 @@ $script:SetMailboxLanguage = $SetMailboxLanguage
 $script:DisableSharedMailboxLogin = $DisableSharedMailboxLogin
 $script:EnableSharedMailboxCopyToSent = $EnableSharedMailboxCopyToSent
 $script:HideUnifiedMailboxFromOutlookClient = $HideUnifiedMailboxFromOutlookClient
-$script:AddExchangeOnlineReport = $AddExchangeOnlineReport
+$script:DisableAddToOneDrive = $DisableAddToOneDrive
 
-Write-Host "AzureAdDeployer version " $Version
+$script:AddExchangeOnlineReport = $AddExchangeOnlineReport
+$script:AddSharePointOnlineReport = $AddSharePointOnlineReport
+
+Write-Host "AzureAdDeployer version" $Version
 
 <# Interactive inputs section #>
 function CheckInteractiveMode {
@@ -50,46 +59,58 @@ function CheckInteractiveMode {
 function InteractiveMenu {
     $StartOptionValue = 0
     $script:AddExchangeOnlineReport = $true
+    $script:AddSharePointOnlineReport = $true
     while ($result -ne $StartOptionValue) {
         $Title = ""
         $Message = ""
         $Status = @"
-1: Add Exchange Online report: $($script:AddExchangeOnlineReport)
-2: Create BreakGlass account: $($script:CreateBreakGlassAccount)
-3: Enable Security Defaults: $($script:EnableSecurityDefaults)
-4: Disable Security Defaults: $($script:DisableSecurityDefaults)
-5: Disable Enterprise Application user consent: $($script:DisableEnterpiseApplicationUserConsent)
-6: Set mailbox language: $($script:SetMailboxLanguage)
-7: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
-8: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
-9: Hide unified mailbox from outlook client: $($script:HideUnifiedMailboxFromOutlookClient)
-0: Start
-"@
-        $StartOption = New-Object System.Management.Automation.Host.ChoiceDescription "&0", "Start"
-        $AddExchangeOnlineReportOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1", "Add Exchange Online report"
-        $CreateBreakGlassAccountOption = New-Object System.Management.Automation.Host.ChoiceDescription "&2", "Create BreakGlass account"
-        $EnableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&3", "Enable Security Defaults"
-        $DisableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&4", "Disable Security Defaults"
-        $DisableEnterpiseApplicationUserConsentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&5", "Disable Enterprise Application user consent"
-        $SetMailboxLanguageOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Set mailbox language"
-        $DisableSharedMailboxLoginOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Disable shared mailbox login"
-        $EnableSharedMailboxCopyToSentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&8", "Enable shared mailbox copy to sent"
-        $HideUnifiedMailboxFromOutlookClientOption = New-Object System.Management.Automation.Host.ChoiceDescription "&9", "Hide unified mailbox from outlook client"
+Report options:
+E: Add Exchange Online report: $($script:AddExchangeOnlineReport)
+P: Add SharePoint Online report: $($script:AddSharePointOnlineReport)
 
-        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $AddExchangeOnlineReportOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption, $HideUnifiedMailboxFromOutlookClientOption)
+Configuration options:
+1: Create BreakGlass account: $($script:CreateBreakGlassAccount)
+2: Enable Security Defaults: $($script:EnableSecurityDefaults)
+3: Disable Security Defaults: $($script:DisableSecurityDefaults)
+4: Disable Enterprise Application user consent: $($script:DisableEnterpiseApplicationUserConsent)
+5: Set mailbox language: $($script:SetMailboxLanguage)
+6: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
+7: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
+8: Hide unified mailbox from outlook client: $($script:HideUnifiedMailboxFromOutlookClient)
+9: Disable add to OneDrive: $($script:DisableAddToOneDrive)
+
+S: Start
+"@
+        $StartOption = New-Object System.Management.Automation.Host.ChoiceDescription "&START", "Start"
+        $AddExchangeOnlineReportOption = New-Object System.Management.Automation.Host.ChoiceDescription "&EXO", "Add Exchange Online report"
+        $AddSharePointOnlineReportOption = New-Object System.Management.Automation.Host.ChoiceDescription "S&PO", "Add SharePoint Online report"
+
+        $CreateBreakGlassAccountOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1", "Create BreakGlass account"
+        $EnableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&2", "Enable Security Defaults"
+        $DisableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&3", "Disable Security Defaults"
+        $DisableEnterpiseApplicationUserConsentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&4", "Disable Enterprise Application user consent"
+        $SetMailboxLanguageOption = New-Object System.Management.Automation.Host.ChoiceDescription "&5", "Set mailbox language"
+        $DisableSharedMailboxLoginOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Disable shared mailbox login"
+        $EnableSharedMailboxCopyToSentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Enable shared mailbox copy to sent"
+        $HideUnifiedMailboxFromOutlookClientOption = New-Object System.Management.Automation.Host.ChoiceDescription "&8", "Hide unified mailbox from outlook client"
+        $DisableAddToOneDriveOption = New-Object System.Management.Automation.Host.ChoiceDescription "&9", "Disable add to OneDrive"
+
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $AddExchangeOnlineReportOption, $AddSharePointOnlineReportOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption, $HideUnifiedMailboxFromOutlookClientOption, $DisableAddToOneDriveOption)
         Write-Host $Status
         $result = $host.ui.PromptForChoice($Title, $Message, $Options, $StartOptionValue)
         switch ($result) {
             0 { "Starting AzureAdDeployer" }
             1 { $script:AddExchangeOnlineReport = ! $script:AddExchangeOnlineReport }
-            2 { $script:CreateBreakGlassAccount = ! $script:CreateBreakGlassAccount }
-            3 { $script:EnableSecurityDefaults = ! $script:EnableSecurityDefaults }
-            4 { $script:DisableSecurityDefaults = ! $script:DisableSecurityDefaults }
-            5 { $script:DisableEnterpiseApplicationUserConsent = ! $script:DisableEnterpiseApplicationUserConsent }
-            6 { $script:SetMailboxLanguage = ! $script:SetMailboxLanguage }
-            7 { $script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin }
-            8 { $script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent }
-            9 { $script:HideUnifiedMailboxFromOutlookClient = ! $script:HideUnifiedMailboxFromOutlookClient }
+            2 { $script:AddSharePointOnlineReport = ! $script:AddSharePointOnlineReport }
+            3 { $script:CreateBreakGlassAccount = ! $script:CreateBreakGlassAccount }
+            4 { $script:EnableSecurityDefaults = ! $script:EnableSecurityDefaults }
+            5 { $script:DisableSecurityDefaults = ! $script:DisableSecurityDefaults }
+            6 { $script:DisableEnterpiseApplicationUserConsent = ! $script:DisableEnterpiseApplicationUserConsent }
+            7 { $script:SetMailboxLanguage = ! $script:SetMailboxLanguage }
+            8 { $script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin }
+            9 { $script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent }
+            10 { $script:HideUnifiedMailboxFromOutlookClient = ! $script:HideUnifiedMailboxFromOutlookClient }
+            11 { $script:DisableAddToOneDrive = ! $script:DisableAddToOneDrive }
         }
     }
 }
@@ -115,6 +136,16 @@ function installGraph {
         Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force
     }
 }
+function installSpo {
+    if (Get-Module -Name PnP.PowerShell -ListAvailable) {
+        Write-Host "Updating SharePoint Online module"
+        Update-Module -Name PnP.PowerShell -Scope CurrentUser -Force
+    }
+    if (-not (Get-Module -Name PnP.PowerShell -ListAvailable)) {
+        Write-Host "Installing SharePoint Online module"
+        Install-Module -Name PnP.PowerShell -Scope CurrentUser -Force
+    }
+}
 
 ##TODO: Always check if Modules are installed before run
     
@@ -126,7 +157,7 @@ function connectGraph {
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
 User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
 RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
-Policy.ReadWrite.Authorization"
+Policy.ReadWrite.Authorization, Sites.Read.All"
     }
     $script:GraphConnected = $true
 }
@@ -134,10 +165,20 @@ function connectExo {
     if ($UseExistingExoSession) { return }
     if (-not $script:ExoConnected) {
         Write-Host "Connecting Exchange Online PowerShell session"
-        # Connect-ExchangeOnline -ShowBanner:$false -Device
         Connect-ExchangeOnline -ShowBanner:$false
     }
     $script:ExoConnected = $true
+}
+function connectSpo {
+    if ($UseExistingSpoSession) { return }
+    if (-not $script:SpoConnected) {
+        Write-Host "Connecting SharePoint Online PowerShell session"
+        Connect-PnPOnline -Url (getSpoAdminUrl) -Interactive -LaunchBrowser
+    }
+    $script:SpoConnected = $true
+}
+function getSpoAdminUrl {
+    return ((Invoke-MgGraphRequest -Method GET -Uri https://graph.microsoft.com/v1.0/sites/root).siteCollection.hostname) -replace ".sharepoint.com", "-admin.sharepoint.com"
 }
 
 <# Disconect session section #>
@@ -156,6 +197,14 @@ function disconnectGraph {
         Disconnect-Graph | Out-Null
     }
     $script:GraphConnected = $false
+}
+function disconnectSpo {
+    if ($UseExistingSpoSession) { return }
+    if ($script:SpoConnected) {
+        Write-Host "Disconnecting SharePoint Online session"
+        Disconnect-PnPOnline
+    }
+    $script:SpoConnected = $false
 }
 
 <# Customer infos#>
@@ -438,6 +487,19 @@ function disableApplicationUserConsent {
     }
 }
 
+<# SharePoint Tenant section #>
+function checkSpoTenantReport {
+    param(
+        [System.Boolean]$DisableAddToOneDrive
+    )
+    Write-Host "Checking SharePoint Online Tenant"
+    if ($DisableAddToOneDrive) {
+        Write-Host "Disable add to OneDrive button"
+        Set-PnPTenant -DisableAddToOneDrive $True
+    }
+    Get-PnPTenant | ConvertTo-HTML -As List -Property DisableAddToOneDrive, ConditionalAccessPolicy -Fragment -PreContent "<h3>Tenant settings</h3>"
+}
+
 <# User mailbox section #>
 function checkMailboxReport {
     param(
@@ -521,8 +583,8 @@ function checkUnifiedMailboxReport {
     }
     if ($HideFromClient) {
         Write-Host "Hiding unified mailboxes from outlook client"
-        $Mailboxes | Set-UnifiedGroup -HiddenFromExchangeClientsEnabled:$true –HiddenFromAddressListsEnabled:$false
-        $Mailboxes = Get-UnifiedGroup -ResultSize Unlimited
+        $Mailboxes | Set-UnifiedGroup -HiddenFromExchangeClientsEnabled:$true -HiddenFromAddressListsEnabled:$false
+        $Mailboxes = Get-UnifiedGroup -ResultSize Unlimited 
     }
     return $Mailboxes | Sort-Object -Property PrimarySmtpAddress | ConvertTo-HTML -As Table -Property DisplayName, PrimarySmtpAddress, HiddenFromAddressListsEnabled, HiddenFromExchangeClientsEnabled -Fragment -PreContent "<br><h3>Unified mailbox report</h3>"
 }
@@ -536,11 +598,13 @@ if ($script:InteractiveMode) {
 if ($Install) {
     Write-Host "Installing prerequisites"
     installGraph
-    installEXO
+    installExo
+    installSpo
     return
 }
 
 connectGraph
+if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) { connectSpo }
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) { connectExo }
 
 $Report = @()
@@ -553,6 +617,10 @@ $Report += checkConditionalAccessPolicyReport
 $Report += checkAppProtectionPolicesReport
 $Report += checkApplicationConsentPolicyReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent
 
+if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) {
+    $Report += "<br><hr><h2>SharePoint Online</h2>"
+    $Report += checkSpoTenantReport -DisableAddToOneDrive $script:DisableAddToOneDrive
+}
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) {
     $Report += "<br><hr><h2>Exchange Online</h2>"
     $Report += checkMailboxReport -Language $script:SetMailboxLanguage
@@ -564,6 +632,9 @@ if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
 }
 if ($script:GraphConnected -and (-not $KeepGraphSessionAlive)) {
     disconnectGraph
+}
+if ($script:SpoConnected -and (-not $KeepSpoSessionAlive)) {
+    disconnectSpo
 }
 
 <# CSS styles section #>
@@ -597,7 +668,7 @@ h3 {
 }
 p {
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 14px
+    font-size: 14px;
 }
 table {
     font-size: 14px;
@@ -648,7 +719,6 @@ $Desktop = [Environment]::GetFolderPath("Desktop")
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
 $LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
 
-# $ReportTitleHtml = "<div class='header'><h1>" + $ReportTitle + "</h1><img src='" + $ReportImageUrl + "' width='25' height='25'></div>"
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 
 $PostContentHtml = @"

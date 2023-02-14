@@ -22,6 +22,12 @@
 
 - Enterprise Application user consent: show, disable
 
+### SharePoint Online
+
+- Add to OneDrive: show, disable
+
+- ConditionalAccessPolicy: show
+
 ### Exchange Online
 
 - User mailbox: show, set language
@@ -53,6 +59,12 @@
 | `-DisableSecurityDefaults` | Disable Security defaults |
 | `-DisableEnterpiseApplicationUserConsent` | Disable Enterprise Application user consent |
 
+### SharePoint Online
+
+| Argument | Description |
+| --- | --- |
+| `-DisableAddToOneDrive` | Disable add to OneDrive |
+
 ### Exchange Online
 
 | Argument | Description |
@@ -68,8 +80,10 @@
 | Argument | Description |
 | --- | --- |
 | `-UseExistingGraphSession` | Do not create a new Graph SDK PowerShell session |
+| `-UseExistingSpoSession` | Do not create a new SharePoint Online PowerShell session |
 | `-UseExistingExoSession` | Do not create a new Exchange Online PowerShell session |
 | `-KeepGraphSessionAlive` | Do not disconnect the Graph SDK PowerShell session after execution |
+| `-KeepSpoSessionAlive` | Do not disconnect the SharePoint Online session after execution |
 | `-KeepExoSessionAlive` | Do not disconnect the Exchange Online PowerShell session after execution |
 
 ## Usage
