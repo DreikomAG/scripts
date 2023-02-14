@@ -442,6 +442,33 @@ function disableApplicationUserConsent {
     }
 }
 
+<# User mailbox section #>
+function checkMailboxReport {
+    param(
+        [System.Boolean]$Language
+    )
+    Write-Host "Checking user mailboxes"
+    if ( -not ($Mailboxes = Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize:Unlimited -Properties DisplayName, UserPrincipalName)) {
+        return "<br><h3>user mailbox report</h3><p>Not found</p>"
+    }
+    if ($Language) {
+        setMailboxLang -Mailbox $Mailboxes
+    }
+    $MailboxReport = @()
+    foreach ($Mailbox in $Mailboxes) {
+        $MailboxReport += checkMailboxLoginAndLocation $Mailbox
+    }
+    return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, LoginAllowed `
+        -Fragment -PreContent "<h3>User mailbox report</h3>"
+}
+function setMailboxLang {
+    param(
+        $Mailbox
+    )
+    Write-Host "Setting mailboxes language:" $script:MailboxLanguageCode "timezone:" $script:MailboxTimeZone
+    $Mailbox | Set-MailboxRegionalConfiguration -LocalizeDefaultFolderName:$true -Language $script:MailboxLanguageCode -TimeZone $script:MailboxTimeZone
+}
+
 <# Shared mailbox section #>
 function checkSharedMailboxReport {
     param(
@@ -450,8 +477,10 @@ function checkSharedMailboxReport {
         [System.Boolean]$EnableCopy
     )
     Write-Host "Checking shared mailboxes"
-    $Mailboxes = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
-    UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled
+    if ( -not ($Mailboxes = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
+            UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled)) {
+        return "<br><h3>Shared mailbox report</h3><p>Not found</p>"
+    }
     if ($Language) { setMailboxLang -Mailbox $Mailboxes }
     if ($DisableLogin) { disableUserAccount $Mailboxes }
     if ($EnableCopy) {
@@ -485,29 +514,16 @@ function setSharedMailboxEnableCopyToSent {
     $Mailbox | Set-Mailbox -MessageCopyForSentAsEnabled $True -MessageCopyForSendOnBehalfEnabled $True
 }
 
-<# User mailbox section #>
-function checkMailboxReport {
+<# Unified mailbox section #>
+function checkUnifiedMailboxReport {
     param(
-        [System.Boolean]$Language
+        [System.Boolean]$HideFromClient
     )
-    Write-Host "Checking user mailboxes"
-    $Mailboxes = Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize:Unlimited -Properties DisplayName, UserPrincipalName
-    if ($Language) {
-        setMailboxLang -Mailbox $Mailboxes
+    Write-Host "Checking unified mailboxes"
+    if ( -not ($Mailboxes = Get-UnifiedGroup -ResultSize Unlimited)) {
+        return "<br><h3>Unified mailbox report</h3><p>Not found</p>"
     }
-    $MailboxReport = @()
-    foreach ($Mailbox in $Mailboxes) {
-        $MailboxReport += checkMailboxLoginAndLocation $Mailbox
-    }
-    return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, LoginAllowed `
-        -Fragment -PreContent "<h3>User mailbox report</h3>"
-}
-function setMailboxLang {
-    param(
-        $Mailbox
-    )
-    Write-Host "Setting mailboxes language:" $script:MailboxLanguageCode "timezone:" $script:MailboxTimeZone
-    $Mailbox | Set-MailboxRegionalConfiguration -LocalizeDefaultFolderName:$true -Language $script:MailboxLanguageCode -TimeZone $script:MailboxTimeZone
+    return $Mailboxes | Sort-Object -Property PrimarySmtpAddress | ConvertTo-HTML -As Table -Property DisplayName, PrimarySmtpAddress, HiddenFromAddressListsEnabled, HiddenFromExchangeClientsEnabled -Fragment -PreContent "<br><h3>Unified mailbox report</h3>"
 }
 
 <# Script logic start section #>
@@ -540,6 +556,7 @@ if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:D
     $Report += "<br><hr><h2>Exchange Online</h2>"
     $Report += checkMailboxReport -Language $script:SetMailboxLanguage
     $Report += checkSharedMailboxReport -Language $script:SetMailboxLanguage -DisableLogin $script:DisableSharedMailboxLogin -EnableCopy $script:EnableSharedMailboxCopyToSent
+    $Report += checkUnifiedMailboxReport
 }
 if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
     disconnectExo

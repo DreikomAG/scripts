@@ -28,6 +28,8 @@
 
 - Shared mailbox: show, set language, disable login, enable copy to sent
 
+- Unified mailbox: show
+
 ## Infos
 
 - No local administrator privileges required
@@ -95,21 +97,21 @@ Note: none of the commands require local administrator privileges on the compute
 
 ## ToDo
 
+- MFA methods show
+
+- M365 group disable in outlook
+
 - Manage Self-service Password Reset
 
 - Create default Conditinal Access polices
 
 - List verified Domains
 
-- Manage Enterprise Applicatin registration restrictions
-
-- List all global admins
-
-- List MFA setup for global admins
-
-- Manage default application protectin policy for iOS and Android
+- Create default application protectin policy for iOS and Android
 
 - List unused licenses
+
+- List all user + licenses
 
 ## Credits
 
