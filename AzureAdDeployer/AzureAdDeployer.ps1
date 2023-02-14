@@ -15,6 +15,7 @@ Param(
     [switch]$DisableSharedMailboxLogin,
     [switch]$EnableSharedMailboxCopyToSent
 )
+$ReportTitle = "Microsoft 365 Security Report"
 $Version = "2.0.0"
 $script:ExoConnected = $false
 $script:GraphConnected = $false
@@ -32,22 +33,6 @@ $script:EnableSharedMailboxCopyToSent = $EnableSharedMailboxCopyToSent
 $script:AddExchangeOnlineReport = $AddExchangeOnlineReport
 
 Write-Host "AzureAdDeployer version " $Version
-
-$Desktop = [Environment]::GetFolderPath("Desktop")
-
-$ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
-$LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
-
-$ReportTitle = "Microsoft 365 Security Report"
-# $ReportTitleHtml = "<div class='header'><h1>" + $ReportTitle + "</h1><img src='" + $ReportImageUrl + "' width='25' height='25'></div>"
-$ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
-
-$PostContentHtml = @"
-<p id='CreationDate'>Creation date: $(Get-Date)</p>
-<br>
-<p id='CreationDate'>Powered by<p/>
-<img src="$($LogoImageUrl)" width='75'>
-"@
 
 <# Interactive inputs section #>
 function CheckInteractiveMode {
@@ -649,6 +634,18 @@ font-size: 12px;
 "@
 
 <# HTML report section #>
+$Desktop = [Environment]::GetFolderPath("Desktop")
+$ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
+$LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
+
+# $ReportTitleHtml = "<div class='header'><h1>" + $ReportTitle + "</h1><img src='" + $ReportImageUrl + "' width='25' height='25'></div>"
+$ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
+
+$PostContentHtml = @"
+<p id='CreationDate'>Creation date: $(Get-Date)</p>
+<img src="$($LogoImageUrl)" width='75'>
+"@
+
 Write-Host "Generating HTML report"
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\AzureAdDeployer-Report.html
