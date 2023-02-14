@@ -37,7 +37,7 @@ $Desktop = [Environment]::GetFolderPath("Desktop")
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
 
-$ReportTitle = "M365 Security Report"
+$ReportTitle = "Microsoft 365 Security Report"
 # $ReportTitleHtml = "<div class='header'><h1>" + $ReportTitle + "</h1><img src='" + $ReportImageUrl + "' width='25' height='25'></div>"
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 
@@ -54,7 +54,6 @@ function CheckInteractiveMode {
     Write-Host "Interactive mode active"
     $script:InteractiveMode = $true
 }
-
 function InteractiveMenu {
     $StartOptionValue = 0
     $script:AddExchangeOnlineReport = $true
@@ -110,7 +109,6 @@ function installEXO {
         Install-Module -Name ExchangeOnlineManagement -Scope CurrentUser -Force
     }
 }
-
 function installGraph {
     if (Get-Module -Name Microsoft.Graph -ListAvailable) {
         Write-Host "Updating PowerShell Graph SDK module"
@@ -190,19 +188,33 @@ function checkUserAccountStatus {
     return (Get-MgUser -UserId $UserId -Property AccountEnabled).AccountEnabled
 }
 
+<# Admin role section #>
+function checkAdminRoleReport {
+    Write-Host "Checking admin role assignments"
+    $Assignments = Get-MgRoleManagementDirectoryRoleAssignment -Property PrincipalId, RoleDefinitionId
+    foreach ($Assignment in $Assignments) {
+        $Assignment | Add-Member -NotePropertyName "RoleName" -NotePropertyValue (Get-MgRoleManagementDirectoryRoleDefinition -UnifiedRoleDefinitionId $Assignment.RoleDefinitionId -Property DisplayName).DisplayName
+        if ($User = Get-MgUser -UserId $Assignment.PrincipalId -Property DisplayName, UserPrincipalName -ErrorAction SilentlyContinue) {
+            $Assignment | Add-Member -NotePropertyName "DisplayName" -NotePropertyValue $User.DisplayName
+            $Assignment | Add-Member -NotePropertyName "UserPrincipalName" -NotePropertyValue $User.UserPrincipalName
+        }
+    }
+    return $Assignments | Where-Object { -not ($null -eq $_.DisplayName) } | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, RoleName -As Table -Fragment -PreContent "<h3>Admin role assignments</h3>"
+}
+
 <# BreakGlass account Section #>
 function checkBreakGlassAccountReport {
     param (
         $Create
     )
     if ($BgAccount = getBreakGlassAccount) {
-        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account</h3>"
+        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass Account</h3>"
     }
     if ($create) {
         createBreakGlassAccount
-        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<h3>BreakGlass Account</h3><p>Check console log for credentials</p>"
+        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass Account</h3><p>Check console log for credentials</p>"
     }
-    return "<h3>BreakGlass account</h3><p>Not found</p>"
+    return "<br><h3>BreakGlass account</h3><p>Not found</p>"
 }
 function getBreakGlassAccount {
     Write-Host "Checking BreakGlass account"
@@ -517,6 +529,7 @@ if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:D
 $Report = @()
 $Report += organizationReport
 $Report += "<br><hr><h2>Azure Active Directory</h2>"
+$Report += checkAdminRoleReport
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
 $Report += checkSecurityDefaultsReport -Enable $script:EnableSecurityDefaults -Disable $script:DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport

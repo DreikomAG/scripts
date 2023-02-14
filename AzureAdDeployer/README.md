@@ -10,6 +10,8 @@
 
 ### Azure Active Directory
 
+- Admin role assignments: show
+
 - BreakGlass account: show, create
 
 - Security Defaults: show, enable, disable
