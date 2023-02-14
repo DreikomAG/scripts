@@ -100,8 +100,6 @@ Note: none of the commands require local administrator privileges on the compute
 
 - MFA methods show
 
-- M365 group disable in outlook
-
 - Manage Self-service Password Reset
 
 - Create default Conditinal Access polices
