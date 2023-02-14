@@ -36,12 +36,18 @@ Write-Host "AzureAdDeployer version " $Version
 $Desktop = [Environment]::GetFolderPath("Desktop")
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
+$LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
 
 $ReportTitle = "Microsoft 365 Security Report"
 # $ReportTitleHtml = "<div class='header'><h1>" + $ReportTitle + "</h1><img src='" + $ReportImageUrl + "' width='25' height='25'></div>"
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 
-$PostContentHtml = "<p id='CreationDate'>Creation date: $(Get-Date)</p>"
+$PostContentHtml = @"
+<p id='CreationDate'>Creation date: $(Get-Date)</p>
+<br>
+<p id='CreationDate'>Powered by<p/>
+<img src="$($LogoImageUrl)" width='75'>
+"@
 
 <# Interactive inputs section #>
 function CheckInteractiveMode {
@@ -128,9 +134,9 @@ function connectGraph {
     if (-not $script:GraphConnected) {
         Write-Host "Connecting to Graph"
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
-        User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
-        RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
-        Policy.ReadWrite.Authorization"
+User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
+RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
+Policy.ReadWrite.Authorization"
     }
     $script:GraphConnected = $true
 }
@@ -218,7 +224,7 @@ function checkBreakGlassAccountReport {
 }
 function getBreakGlassAccount {
     Write-Host "Checking BreakGlass account"
-    $BgAccounts = Get-MgUser -Filter "startswith(displayName,'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
+    $BgAccounts = Get-MgUser -Filter "startswith(displayName, 'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
     if (-not $bgAccounts) { return }
     foreach ($BgAccount in $BgAccounts) {
         Add-Member -InputObject $BgAccount -NotePropertyName "GlobalAdmin" -NotePropertyValue (checkGlobalAdminRole $BgAccount.Id)
@@ -270,7 +276,7 @@ function generatePassword {
     $uCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     $lCharSet = "abcdefghijklmnopqrstuvwxyz"
     $nCharSet = "0123456789"
-    $sCharSet = "/*-+,!?=()@;:._"
+    $sCharSet = "/*-+, !?=()@; :._"
     $charSet = ""
     if ($upper -gt 0) { $charSet += $uCharSet }
     if ($lower -gt 0) { $charSet += $lCharSet }
@@ -635,9 +641,9 @@ tbody tr:nth-of-type(even) {
     background-color: #f3f3f3;
 }
 #CreationDate {
-    font-family: Arial, Helvetica, sans-serif;
-    color: #666666;
-    font-size: 12px;
+font-family: Arial, Helvetica, sans-serif;
+color: #666666;
+font-size: 12px;
 }
 </style>
 "@
