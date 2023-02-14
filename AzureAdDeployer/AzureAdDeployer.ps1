@@ -13,7 +13,8 @@ Param(
     [switch]$DisableEnterpiseApplicationUserConsent,
     [switch]$SetMailboxLanguage,
     [switch]$DisableSharedMailboxLogin,
-    [switch]$EnableSharedMailboxCopyToSent
+    [switch]$EnableSharedMailboxCopyToSent,
+    [switch]$HideUnifiedMailboxFromOutlookClient
 )
 $ReportTitle = "Microsoft 365 Security Report"
 $Version = "2.0.0"
@@ -30,6 +31,7 @@ $script:DisableEnterpiseApplicationUserConsent = $DisableEnterpiseApplicationUse
 $script:SetMailboxLanguage = $SetMailboxLanguage
 $script:DisableSharedMailboxLogin = $DisableSharedMailboxLogin
 $script:EnableSharedMailboxCopyToSent = $EnableSharedMailboxCopyToSent
+$script:HideUnifiedMailboxFromOutlookClient = $HideUnifiedMailboxFromOutlookClient
 $script:AddExchangeOnlineReport = $AddExchangeOnlineReport
 
 Write-Host "AzureAdDeployer version " $Version
@@ -60,6 +62,7 @@ function InteractiveMenu {
 6: Set mailbox language: $($script:SetMailboxLanguage)
 7: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
 8: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
+9: Hide unified mailbox from outlook client: $($script:HideUnifiedMailboxFromOutlookClient)
 0: Start
 "@
         $StartOption = New-Object System.Management.Automation.Host.ChoiceDescription "&0", "Start"
@@ -71,8 +74,9 @@ function InteractiveMenu {
         $SetMailboxLanguageOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Set mailbox language"
         $DisableSharedMailboxLoginOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Disable shared mailbox login"
         $EnableSharedMailboxCopyToSentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&8", "Enable shared mailbox copy to sent"
+        $HideUnifiedMailboxFromOutlookClientOption = New-Object System.Management.Automation.Host.ChoiceDescription "&9", "Hide unified mailbox from outlook client"
 
-        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $AddExchangeOnlineReportOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption)
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $AddExchangeOnlineReportOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption, $HideUnifiedMailboxFromOutlookClientOption)
         Write-Host $Status
         $result = $host.ui.PromptForChoice($Title, $Message, $Options, $StartOptionValue)
         switch ($result) {
@@ -85,6 +89,7 @@ function InteractiveMenu {
             6 { $script:SetMailboxLanguage = ! $script:SetMailboxLanguage }
             7 { $script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin }
             8 { $script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent }
+            9 { $script:HideUnifiedMailboxFromOutlookClient = ! $script:HideUnifiedMailboxFromOutlookClient }
         }
     }
 }
@@ -514,6 +519,11 @@ function checkUnifiedMailboxReport {
     if ( -not ($Mailboxes = Get-UnifiedGroup -ResultSize Unlimited)) {
         return "<br><h3>Unified mailbox report</h3><p>Not found</p>"
     }
+    if ($HideFromClient) {
+        Write-Host "Hiding unified mailboxes from outlook client"
+        $Mailboxes | Set-UnifiedGroup -HiddenFromExchangeClientsEnabled:$true –HiddenFromAddressListsEnabled:$false
+        $Mailboxes = Get-UnifiedGroup -ResultSize Unlimited
+    }
     return $Mailboxes | Sort-Object -Property PrimarySmtpAddress | ConvertTo-HTML -As Table -Property DisplayName, PrimarySmtpAddress, HiddenFromAddressListsEnabled, HiddenFromExchangeClientsEnabled -Fragment -PreContent "<br><h3>Unified mailbox report</h3>"
 }
 
@@ -531,7 +541,7 @@ if ($Install) {
 }
 
 connectGraph
-if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent) { connectExo }
+if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) { connectExo }
 
 $Report = @()
 $Report += organizationReport
@@ -543,11 +553,11 @@ $Report += checkConditionalAccessPolicyReport
 $Report += checkAppProtectionPolicesReport
 $Report += checkApplicationConsentPolicyReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent
 
-if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent) {
+if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) {
     $Report += "<br><hr><h2>Exchange Online</h2>"
     $Report += checkMailboxReport -Language $script:SetMailboxLanguage
     $Report += checkSharedMailboxReport -Language $script:SetMailboxLanguage -DisableLogin $script:DisableSharedMailboxLogin -EnableCopy $script:EnableSharedMailboxCopyToSent
-    $Report += checkUnifiedMailboxReport
+    $Report += checkUnifiedMailboxReport -HideFromClient $script:HideUnifiedMailboxFromOutlookClient
 }
 if ($script:ExoConnected -and (-not $KeepExoSessionAlive)) {
     disconnectExo
