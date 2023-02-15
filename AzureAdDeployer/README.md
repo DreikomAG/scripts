@@ -4,7 +4,7 @@
 
 ### General
 
-- Generates a HTML report to your Desktop called `AzureAdDeployer-Report.html`
+- Generates a HTML report to your Desktop called `Microsoft365-Report-<customer_name>.html`
 
 - Interactive console GUI
 
@@ -38,17 +38,55 @@
 
 ## Infos
 
-- No local administrator privileges required
+- Works on PowerShell Windows and PowerShell Core
 
-- Works on PowerShell 5.1 and PowerShell Core
+## Installation
+
+### Uninstall previously installed modules
+
+PowerShell as user:
+
+```PowerShell
+$Documents = [Environment]::GetFolderPath("MyDocuments") 
+Remove-Item $Documents\PowerShell\Modules\ -Recurse -Force
+Remove-Item $Documents\WindowsPowerShell\Modules\ -Recurse -Force
+```
+
+Windows PowerShell 5.1 (not Core!) as Administrator:
+
+```PowerShell
+Uninstall-Module -Name Microsoft365DSC
+
+Uninstall-Module Microsoft.Graph
+Get-InstalledModule Microsoft.Graph.* | %{ if($_.Name -ne "Microsoft.Graph.Authentication"){ Uninstall-Module $_.Name } }
+Uninstall-Module Microsoft.Graph.Authentication
+
+Uninstall-Module -Name PnP.PowerShell
+
+Uninstall-Module -Name ExchangeOnlineManagement
+```
+
+### Installation
+
+Windows PowerShell 5.1 (not Core!) as Administrator:
+
+```PowerShell
+Install-Module -Name Microsoft.Graph -Scope AllUsers -Force
+Install-Module -Name PnP.PowerShell -Scope AllUsers -Force
+Install-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
+```
+
+### Updating
+
+Windows PowerShell 5.1 (not Core!) as Administrator:
+
+```PowerShell
+Update-Module -Name Microsoft.Graph -Scope AllUsers -Force
+Update-Module -Name PnP.PowerShell -Scope AllUsers -Force
+Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
+```
 
 ## Arguments
-
-### General
-
-| Argument | Description |
-| --- | --- |
-| `-Install` | Install or update required PowerShell modules |
 
 ### Azure Active directory
 
@@ -88,12 +126,6 @@
 
 ## Usage
 
-Note: none of the commands require local administrator privileges on the computer!
-
-### Install required PowerShell modules
-
-`.\AzureAdDeployer.ps1 -Install`
-
 ### Interactive GUI
 
 `.\AzureAdDeployer.ps1`
@@ -109,6 +141,7 @@ Note: none of the commands require local administrator privileges on the compute
 ### Disable Security Defaults
 
 `.\AzureAdDeployer.ps1 -DisableSecurityDefaults`
+
 
 ## ToDo
 

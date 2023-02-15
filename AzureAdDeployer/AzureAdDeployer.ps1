@@ -1,7 +1,7 @@
 # Maintainer: https://github.com/swissbuechi
+# Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Identity.DirectoryManagement, Microsoft.Graph.DeviceManagement.Enrolment, Microsoft.Graph.Identity.SignIns, Microsoft.Graph.Devices.CorporateManagement, ExchangeOnlineManagement, PnP.PowerShell
 [CmdletBinding()]
 Param(
-    [switch]$Install,
     [switch]$UseExistingExoSession,   
     [switch]$KeepExoSessionAlive,    
     [switch]$UseExistingGraphSession,
@@ -30,6 +30,8 @@ $script:InteractiveMode = $false
 $script:MailboxLanguageCode = "de-CH"
 $script:MailboxTimeZone = "W. Europe Standard Time" 
 
+$script:CustomerName = ""
+
 $script:CreateBreakGlassAccount = $CreateBreakGlassAccount
 $script:EnableSecurityDefaults = $EnableSecurityDefaults
 $script:DisableSecurityDefaults = $DisableSecurityDefaults
@@ -53,7 +55,6 @@ function CheckInteractiveMode {
     if ($Parameters.Count) {
         return
     }
-    Write-Host "Interactive mode active"
     $script:InteractiveMode = $true
 }
 function InteractiveMenu {
@@ -64,6 +65,7 @@ function InteractiveMenu {
         $Title = ""
         $Message = ""
         $Status = @"
+
 Report options:
 E: Add Exchange Online report: $($script:AddExchangeOnlineReport)
 P: Add SharePoint Online report: $($script:AddSharePointOnlineReport)
@@ -114,41 +116,7 @@ S: Start
         }
     }
 }
-
-<# Install modules section #>
-function installEXO {
-    if (Get-Module -Name ExchangeOnlineManagement -ListAvailable) {
-        Write-Host "Updating PowerShell Exchange Online module"
-        Update-Module -Name ExchangeOnlineManagement -Scope CurrentUser -Force
-    }
-    if (-not (Get-Module -Name ExchangeOnlineManagement -ListAvailable)) {
-        Write-Host "Installing PowerShell Exchange Online module"
-        Install-Module -Name ExchangeOnlineManagement -Scope CurrentUser -Force
-    }
-}
-function installGraph {
-    if (Get-Module -Name Microsoft.Graph -ListAvailable) {
-        Write-Host "Updating PowerShell Graph SDK module"
-        Update-Module -Name Microsoft.Graph -Scope CurrentUser -Force
-    }
-    if (-not (Get-Module -Name Microsoft.Graph -ListAvailable)) {
-        Write-Host "Installing PowerShell Graph SDK module"
-        Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force
-    }
-}
-function installSpo {
-    if (Get-Module -Name PnP.PowerShell -ListAvailable) {
-        Write-Host "Updating SharePoint Online module"
-        Update-Module -Name PnP.PowerShell -Scope CurrentUser -Force
-    }
-    if (-not (Get-Module -Name PnP.PowerShell -ListAvailable)) {
-        Write-Host "Installing SharePoint Online module"
-        Install-Module -Name PnP.PowerShell -Scope CurrentUser -Force
-    }
-}
-
-##TODO: Always check if Modules are installed before run
-    
+   
 <# Connect sessions section #>
 function connectGraph {
     if ($UseExistingGraphSession) { return }
@@ -173,7 +141,8 @@ function connectSpo {
     if ($UseExistingSpoSession) { return }
     if (-not $script:SpoConnected) {
         Write-Host "Connecting SharePoint Online PowerShell session"
-        Connect-PnPOnline -Url (getSpoAdminUrl) -Interactive -LaunchBrowser
+        if ($PSVersionTable.PSEdition -eq "Core") { Connect-PnPOnline -Url (getSpoAdminUrl) -Interactive -LaunchBrowser }
+        if ($PSVersionTable.PSEdition -eq "Desktop") { Connect-PnPOnline -Url (getSpoAdminUrl) -Interactive }
     }
     $script:SpoConnected = $true
 }
@@ -210,6 +179,7 @@ function disconnectSpo {
 <# Customer infos#>
 function organizationReport {
     $Organization = Get-MgOrganization -Property DisplayName, Id
+    $script:CustomerName = $Organization.DisplayName
     return  "<h2>$($Organization.DisplayName) ($($Organization.Id))</h2>"
 }
 
@@ -595,14 +565,6 @@ if ($script:InteractiveMode) {
     InteractiveMenu
 }
 
-if ($Install) {
-    Write-Host "Installing prerequisites"
-    installGraph
-    installExo
-    installSpo
-    return
-}
-
 connectGraph
 if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) { connectSpo }
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) { connectExo }
@@ -720,14 +682,15 @@ $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
 $LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
 
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
+$ReportName = ("Microsoft365-Report-$($script:CustomerName).html").Replace(" ", "")
 
 $PostContentHtml = @"
 <p id='CreationDate'>Creation date: $(Get-Date)</p>
 <img src="$($LogoImageUrl)" width='75'>
 "@
 
-Write-Host "Generating HTML report"
+Write-Host "Generating HTML report:" $ReportName
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
-$Report | Out-File $Desktop\AzureAdDeployer-Report.html
-Invoke-Item $Desktop\AzureAdDeployer-Report.html
+$Report | Out-File $Desktop\$ReportName
+Invoke-Item $Desktop\$ReportName
 if ($script:InteractiveMode -and $script:CreateBreakGlassAccount) { Read-Host "Click [ENTER] key to exit AzureAdDeployer" }
