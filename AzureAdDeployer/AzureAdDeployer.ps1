@@ -223,17 +223,17 @@ function checkBreakGlassAccountReport {
         $Create
     )
     if ($BgAccount = getBreakGlassAccount) {
-        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass Account</h3>"
+        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass Account</h3>"
     }
     if ($create) {
         createBreakGlassAccount
-        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass Account</h3><p>Check console log for credentials</p>"
+        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass Account</h3><p>Check console log for credentials</p>"
     }
     return "<br><h3>BreakGlass account</h3><p>Not found</p>"
 }
 function getBreakGlassAccount {
     Write-Host "Checking BreakGlass account"
-    $BgAccounts = Get-MgUser -Filter "startswith(displayName, 'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName
+    $BgAccounts = Get-MgUser -Filter "startswith(displayName, 'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName, AccountEnabled
     if (-not $bgAccounts) { return }
     foreach ($BgAccount in $BgAccounts) {
         Add-Member -InputObject $BgAccount -NotePropertyName "GlobalAdmin" -NotePropertyValue (checkGlobalAdminRole $BgAccount.Id)
