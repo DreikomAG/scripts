@@ -21,7 +21,11 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.0.0"
+$Version = "2.1.0"
+
+$ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
+$LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
+
 $script:ExoConnected = $false
 $script:GraphConnected = $false
 $script:SpoConnected = $false
@@ -121,30 +125,39 @@ S: Start
 function connectGraph {
     if ($UseExistingGraphSession) { return }
     if (-not $script:GraphConnected) {
-        Write-Host "Connecting to Graph"
+        Write-Host "Connecting Graph PowerShell"
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
 User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
 RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
 Policy.ReadWrite.Authorization, Sites.Read.All"
     }
-    $script:GraphConnected = $true
+    if ((Get-MgContext) -ne "") {
+        Write-Host "Connected to Microsoft Graph PowerShell using $((Get-MgContext).Account) account"
+        $script:GraphConnected = $true
+    }
 }
 function connectExo {
     if ($UseExistingExoSession) { return }
     if (-not $script:ExoConnected) {
-        Write-Host "Connecting Exchange Online PowerShell session"
+        Write-Host "Connecting Exchange Online PowerShell"
         Connect-ExchangeOnline -ShowBanner:$false
     }
-    $script:ExoConnected = $true
+    if ((Get-ConnectionInformation).State -eq "Connected") {
+        "Write-Host Connected to Exchange Online PowerShell using $((Get-ConnectionInformation).UserPrincipalName) account"
+        $script:ExoConnected = $true
+    }
 }
 function connectSpo {
     if ($UseExistingSpoSession) { return }
     if (-not $script:SpoConnected) {
-        Write-Host "Connecting SharePoint Online PowerShell session"
+        Write-Host "Connecting SharePoint Online PowerShell"
         if ($PSVersionTable.PSEdition -eq "Core") { Connect-PnPOnline -Url (getSpoAdminUrl) -Interactive -LaunchBrowser }
         if ($PSVersionTable.PSEdition -eq "Desktop") { Connect-PnPOnline -Url (getSpoAdminUrl) -Interactive }
     }
-    $script:SpoConnected = $true
+    if ((Get-PnPConnection) -ne "") {
+        Write-Host "Connected to SharePoint Online PowerShell tenant $((Get-PnPConnection).Url)"
+        $script:SpoConnected = $true
+    }
 }
 function getSpoAdminUrl {
     return ((Invoke-MgGraphRequest -Method GET -Uri https://graph.microsoft.com/v1.0/sites/root).siteCollection.hostname) -replace ".sharepoint.com", "-admin.sharepoint.com"
@@ -208,12 +221,15 @@ function checkAdminRoleReport {
     Write-Host "Checking admin role assignments"
     $Assignments = Get-MgRoleManagementDirectoryRoleAssignment -Property PrincipalId, RoleDefinitionId
     foreach ($Assignment in $Assignments) {
+        $ProcessedCount++
+        Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Assignment.PrincipalId)"
         if ($User = Get-MgUser -UserId $Assignment.PrincipalId -Property DisplayName, UserPrincipalName -ErrorAction SilentlyContinue) {
             $Assignment | Add-Member -NotePropertyName "DisplayName" -NotePropertyValue $User.DisplayName
             $Assignment | Add-Member -NotePropertyName "UserPrincipalName" -NotePropertyValue $User.UserPrincipalName
             $Assignment | Add-Member -NotePropertyName "RoleName" -NotePropertyValue (Get-MgRoleManagementDirectoryRoleDefinition -UnifiedRoleDefinitionId $Assignment.RoleDefinitionId -Property DisplayName).DisplayName
         }
     }
+    Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Assignment.PrincipalId)" -Status "Ready" -Completed
     return $Assignments | Where-Object { -not ($null -eq $_.DisplayName) } | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, RoleName -As Table -Fragment -PreContent "<h3>Admin role assignments</h3>"
 }
 
@@ -223,11 +239,11 @@ function checkBreakGlassAccountReport {
         $Create
     )
     if ($BgAccount = getBreakGlassAccount) {
-        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass Account</h3>"
+        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3>"
     }
     if ($create) {
         createBreakGlassAccount
-        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass Account</h3><p>Check console log for credentials</p>"
+        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3><p>Check console log for credentials</p>"
     }
     return "<br><h3>BreakGlass account</h3><p>Not found</p>"
 }
@@ -309,6 +325,87 @@ function generatePassword {
         $password = Get-RandomPassword $length $upper $lower $numeric $special
     }
     return $password
+}
+
+<# User MFA section#>
+function checkUserMfaStatusReport {
+    Write-Host "Checking user MFA status"
+    $Users = Get-MgUser -All -Filter "UserType eq 'Member'" -Property DisplayName, UserPrincipalName, AssignedLicenses, AccountEnabled
+    $Users | ForEach-Object {
+        $ProcessedCount++
+        if (($_.AssignedLicenses).Count -ne 0) {
+            $LicenseStatus = "Licensed"
+        }
+        else {
+            $LicenseStatus = "Unlicensed"
+        }
+        Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($_.DisplayName)"
+        [array]$MFAData = Get-MgUserAuthenticationMethod -UserId $_.UserPrincipalName
+        $AuthenticationMethod = @()
+        $AdditionalDetails = @()
+        foreach ($MFA in $MFAData) { 
+            Switch ($MFA.AdditionalProperties["@odata.type"]) { 
+                "#microsoft.graph.passwordAuthenticationMethod" {
+                    $AuthMethod = 'PasswordAuthentication'
+                    $AuthMethodDetails = $MFA.AdditionalProperties["displayName"] 
+                } 
+                "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod" {
+                    $AuthMethod = 'AuthenticatorApp'
+                    $AuthMethodDetails = $MFA.AdditionalProperties["displayName"] 
+                }
+                "#microsoft.graph.phoneAuthenticationMethod" {
+                    $AuthMethod = 'PhoneAuthentication'
+                    $AuthMethodDetails = $MFA.AdditionalProperties["phoneType", "phoneNumber"] -join ' '
+                } 
+                "#microsoft.graph.fido2AuthenticationMethod" {
+                    $AuthMethod = 'Fido2'
+                    $AuthMethodDetails = $MFA.AdditionalProperties["model"] 
+                }  
+                "#microsoft.graph.windowsHelloForBusinessAuthenticationMethod" {
+                    $AuthMethod = 'WindowsHelloForBusiness'
+                    $AuthMethodDetails = $MFA.AdditionalProperties["displayName"] 
+                }                        
+                "#microsoft.graph.emailAuthenticationMethod" {
+                    $AuthMethod = 'EmailAuthentication'
+                    $AuthMethodDetails = $MFA.AdditionalProperties["emailAddress"] 
+                }               
+                "microsoft.graph.temporaryAccessPassAuthenticationMethod" {
+                    $AuthMethod = 'TemporaryAccessPass'
+                    $AuthMethodDetails = 'Access pass lifetime (minutes): ' + $MFA.AdditionalProperties["lifetimeInMinutes"] 
+                }
+                "#microsoft.graph.passwordlessMicrosoftAuthenticatorAuthenticationMethod" {
+                    $AuthMethod = 'PasswordlessMSAuthenticator'
+                    $AuthMethodDetails = $MFA.AdditionalProperties["displayName"]
+                }
+                "#microsoft.graph.softwareOathAuthenticationMethod" {
+                    $AuthMethod = 'SoftwareOath'
+                }
+            }
+            $AuthenticationMethod += $AuthMethod
+            if ($null -ne $AuthMethodDetails) {
+                $AdditionalDetails += "$AuthMethod : $AuthMethodDetails"
+            }
+        }
+        $AuthenticationMethod = $AuthenticationMethod | Sort-Object | Get-Unique
+        $AdditionalDetail = $AdditionalDetails -join ', '
+        [array]$StrongMFAMethods = ("Fido2", "PhoneAuthentication", "PasswordlessMSAuthenticator", "AuthenticatorApp", "WindowsHelloForBusiness")
+        $MFAStatus = "Disabled"
+
+        foreach ($StrongMFAMethod in $StrongMFAMethods) {
+            if ($AuthenticationMethod -contains $StrongMFAMethod) {
+                $MFAStatus = "Strong"
+                break
+            }
+        }
+        if ( $AuthenticationMethod -contains "SoftwareOath") {
+            $MFAStatus = "Weak"
+        }
+        Add-Member -InputObject $_ -NotePropertyName "LicenseStatus" -NotePropertyValue $LicenseStatus
+        Add-Member -InputObject $_ -NotePropertyName "MFAStatus" -NotePropertyValue $MFAStatus
+        Add-Member -InputObject $_ -NotePropertyName "AdditionalDetail" -NotePropertyValue $AdditionalDetail
+    }
+    Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($_.DisplayName)" -Status "Ready" -Completed
+    $Users | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, LicenseStatus, AccountEnabled, MFAStatus, AdditionalDetail -As Table -Fragment -PreContent "<br><h3>User MFA status</h3>"
 }
 
 <# Security Defaults section #>
@@ -484,8 +581,11 @@ function checkMailboxReport {
     }
     $MailboxReport = @()
     foreach ($Mailbox in $Mailboxes) {
+        $ProcessedCount++
+        Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)"
         $MailboxReport += checkMailboxLoginAndLocation $Mailbox
     }
+    Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)" -Status "Ready" -Completed
     return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, LoginAllowed `
         -Fragment -PreContent "<h3>User mailbox report</h3>"
 }
@@ -518,8 +618,11 @@ function checkSharedMailboxReport {
     }
     $MailboxReport = @()
     foreach ($Mailbox in $Mailboxes) {
+        $ProcessedCount++
+        Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)"
         $MailboxReport += checkMailboxLoginAndLocation $Mailbox
     }
+    Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)" -Status "Ready" -Completed
     return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
     MessageCopyForSendOnBehalfEnabled, LoginAllowed `
         -Fragment -PreContent "<br><h3>Shared mailbox report</h3>"
@@ -574,6 +677,7 @@ $Report += organizationReport
 $Report += "<br><hr><h2>Azure Active Directory</h2>"
 $Report += checkAdminRoleReport
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
+$Report += checkUserMfaStatusReport
 $Report += checkSecurityDefaultsReport -Enable $script:EnableSecurityDefaults -Disable $script:DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
 $Report += checkAppProtectionPolicesReport
@@ -611,6 +715,8 @@ html {
 body {
     display: table-cell;
     vertical-align: middle;
+    padding-right: 200px;
+    padding-left: 200px;
 }
 h1 {
     font-family: Arial, Helvetica, sans-serif;
@@ -678,8 +784,6 @@ font-size: 12px;
 
 <# HTML report section #>
 $Desktop = [Environment]::GetFolderPath("Desktop")
-$ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
-$LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
 
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 $ReportName = ("Microsoft365-Report-$($script:CustomerName).html").Replace(" ", "")

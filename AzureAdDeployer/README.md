@@ -12,6 +12,8 @@
 
 - Admin role assignments: show
 
+- User mfa status: show
+
 - BreakGlass account: show, create
 
 - Security Defaults: show, enable, disable
@@ -145,9 +147,11 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 
 ## ToDo
 
-- MFA methods show
+- Manage Self-service password reset (no API available)
 
-- Manage Self-service Password Reset
+- Enable enterpise state roaming (no API available)
+
+- Manage users allowed to join devices to aad (no API available)
 
 - Create default Conditinal Access polices
 
@@ -156,8 +160,6 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 - Create default application protectin policy for iOS and Android
 
 - List unused licenses
-
-- List all user + licenses
 
 ## Credits
 
