@@ -343,7 +343,7 @@ function checkUserMfaStatusReport {
         [array]$MFAData = Get-MgUserAuthenticationMethod -UserId $_.UserPrincipalName
         $AuthenticationMethod = @()
         $AdditionalDetails = @()
-        foreach ($MFA in $MFAData) { 
+        foreach ($MFA in $MFAData) {
             Switch ($MFA.AdditionalProperties["@odata.type"]) { 
                 "#microsoft.graph.passwordAuthenticationMethod" {
                     $AuthMethod = 'PasswordAuthentication'
@@ -390,7 +390,6 @@ function checkUserMfaStatusReport {
         $AdditionalDetail = $AdditionalDetails -join ', '
         [array]$StrongMFAMethods = ("Fido2", "PhoneAuthentication", "PasswordlessMSAuthenticator", "AuthenticatorApp", "WindowsHelloForBusiness")
         $MFAStatus = "Disabled"
-
         foreach ($StrongMFAMethod in $StrongMFAMethods) {
             if ($AuthenticationMethod -contains $StrongMFAMethod) {
                 $MFAStatus = "Strong"
@@ -450,63 +449,6 @@ function checkConditionalAccessPolicyReport {
     return "<br><h3>Conditional Access policies</h3><p>Not found</p>"
 }
 
-# function deleteConditionalAccessPolicy {
-#     param (
-#         [Parameter(Mandatory = $true)]
-#         $Policies
-#     )
-#     foreach ($Policy in $Policies) {
-#         Write-Host "Removing existing Conditional Access policies"
-#         Remove-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $Policy.Id
-#     }
-# }
-
-# function cleanUpConditionalAccessPolicy {
-#     $Policies = getConditionalAccessPolicy
-#     deleteConditionalAccessPolicy $Policies
-# }
-
-# function getNamedLocations {
-#     return Get-MgIdentityConditionalAccessNamedLocation -Property Id, DisplayName
-# }
-
-# function createConditionalAccessPolicy {
-#     $params = @{
-#         DisplayName   = "Require MFA from all unknown locations"
-#         State         = "enabled"
-#         Conditions    = @{
-#             Applications = @{
-#                 IncludeApplications = @(
-#                     "All"
-#                 )
-#             }
-#             Users        = @{
-#                 IncludeUsers = @(
-#                     "All"
-#                 )
-#                 ExcludeUsers = @(
-#                     getBreakGlassAccount.Id
-#                 )
-#             }
-#             Locations    = @{
-#                 IncludeLocations = @(
-#                     "All"
-#                 )
-#                 ExcludeLocations = @(
-#                     "AllTrusted"
-#                 )
-#             }
-#         }
-#         GrantControls = @{
-#             Operator        = "OR"
-#             BuiltInControls = @(
-#                 "mfa"
-#             )
-#         }
-#     }
-#     New-MgIdentityConditionalAccessPolicy -BodyParameter $params
-# }
-
 <# Application protection polices section#>
 function checkAppProtectionPolicesReport {
     Write-Host "Checking App protection policies"
@@ -523,13 +465,6 @@ function getAppProtectionPolices {
     $Policies += $AndroidPolicies
     return $Policies
 }
-# function createAndroidAppProtectionPolicy {
-#     $Body = @{
-#         "@odata.type" = "#microsoft.graph.androidManagedAppProtection"
-#         displayName = "Test"
-#     }
-#     New-MgDeviceAppManagementAndroidManagedAppProtection -BodyParameter $Body
-# }
 
 <# Enterprise Application section #>
 function checkApplicationConsentPolicyReport {
@@ -784,15 +719,12 @@ font-size: 12px;
 
 <# HTML report section #>
 $Desktop = [Environment]::GetFolderPath("Desktop")
-
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 $ReportName = ("Microsoft365-Report-$($script:CustomerName).html").Replace(" ", "")
-
 $PostContentHtml = @"
 <p id='CreationDate'>Creation date: $(Get-Date)</p>
 <img src="$($LogoImageUrl)" width='75'>
 "@
-
 Write-Host "Generating HTML report:" $ReportName
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\$ReportName

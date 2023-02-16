@@ -166,3 +166,79 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 ### Icons
 
 - <a href="https://www.flaticon.com/free-icons/error" title="error icons">Error icons created by Smashicons - Flaticon</a>
+
+
+## Template code for later functions
+
+### Conditional Access policies
+
+```PowerShell
+function deleteConditionalAccessPolicy {
+    param (
+        [Parameter(Mandatory = $true)]
+        $Policies
+    )
+    foreach ($Policy in $Policies) {
+        Write-Host "Removing existing Conditional Access policies"
+        Remove-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $Policy.Id
+    }
+}
+
+function cleanUpConditionalAccessPolicy {
+    $Policies = getConditionalAccessPolicy
+    deleteConditionalAccessPolicy $Policies
+}
+
+function getNamedLocations {
+    return Get-MgIdentityConditionalAccessNamedLocation -Property Id, DisplayName
+}
+
+function createConditionalAccessPolicy {
+    $params = @{
+        DisplayName   = "Require MFA from all unknown locations"
+        State         = "enabled"
+        Conditions    = @{
+            Applications = @{
+                IncludeApplications = @(
+                    "All"
+                )
+            }
+            Users        = @{
+                IncludeUsers = @(
+                    "All"
+                )
+                ExcludeUsers = @(
+                    getBreakGlassAccount.Id
+                )
+            }
+            Locations    = @{
+                IncludeLocations = @(
+                    "All"
+                )
+                ExcludeLocations = @(
+                    "AllTrusted"
+                )
+            }
+        }
+        GrantControls = @{
+            Operator        = "OR"
+            BuiltInControls = @(
+                "mfa"
+            )
+        }
+    }
+    New-MgIdentityConditionalAccessPolicy -BodyParameter $params
+}
+```
+
+### Application protection policies
+
+```PowerShell
+function createAndroidAppProtectionPolicy {
+    $Body = @{
+        "@odata.type" = "#microsoft.graph.androidManagedAppProtection"
+        displayName = "Test"
+    }
+    New-MgDeviceAppManagementAndroidManagedAppProtection -BodyParameter $Body
+}
+```
