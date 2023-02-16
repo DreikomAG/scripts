@@ -143,7 +143,7 @@ function connectExo {
         Connect-ExchangeOnline -ShowBanner:$false
     }
     if ((Get-ConnectionInformation).State -eq "Connected") {
-        "Write-Host Connected to Exchange Online PowerShell using $((Get-ConnectionInformation).UserPrincipalName) account"
+        Write-Host "Connected to Exchange Online PowerShell using $((Get-ConnectionInformation).UserPrincipalName) account"
         $script:ExoConnected = $true
     }
 }
@@ -388,7 +388,7 @@ function checkUserMfaStatusReport {
         }
         $AuthenticationMethod = $AuthenticationMethod | Sort-Object | Get-Unique
         $AdditionalDetail = $AdditionalDetails -join ', '
-        [array]$StrongMFAMethods = ("Fido2", "PhoneAuthentication", "PasswordlessMSAuthenticator", "AuthenticatorApp", "WindowsHelloForBusiness")
+        [array]$StrongMFAMethods = ("Fido2", "PasswordlessMSAuthenticator", "AuthenticatorApp", "WindowsHelloForBusiness", "SoftwareOath")
         $MFAStatus = "Disabled"
         foreach ($StrongMFAMethod in $StrongMFAMethods) {
             if ($AuthenticationMethod -contains $StrongMFAMethod) {
@@ -396,7 +396,7 @@ function checkUserMfaStatusReport {
                 break
             }
         }
-        if ( $AuthenticationMethod -contains "SoftwareOath") {
+        if ( ($AuthenticationMethod -contains "PhoneAuthentication") -or ($AuthenticationMethod -contains "EmailAuthentication")) {
             $MFAStatus = "Weak"
         }
         Add-Member -InputObject $_ -NotePropertyName "LicenseStatus" -NotePropertyValue $LicenseStatus
@@ -404,7 +404,7 @@ function checkUserMfaStatusReport {
         Add-Member -InputObject $_ -NotePropertyName "AdditionalDetail" -NotePropertyValue $AdditionalDetail
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($_.DisplayName)" -Status "Ready" -Completed
-    $Users | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, LicenseStatus, AccountEnabled, MFAStatus, AdditionalDetail -As Table -Fragment -PreContent "<br><h3>User MFA status</h3>"
+    $Users | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, LicenseStatus, AccountEnabled, MFAStatus, AdditionalDetail -As Table -Fragment -PreContent "<br><h3>User MFA status</h3>" -PostContent "<p>Weak: PhoneAuthentication, EmailAuthentication</p><p>Strong: Fido2, PasswordlessMSAuthenticator, AuthenticatorApp, WindowsHelloForBusiness, SoftwareOath</p>"
 }
 
 <# Security Defaults section #>
@@ -494,7 +494,7 @@ function checkSpoTenantReport {
     param(
         [System.Boolean]$DisableAddToOneDrive
     )
-    Write-Host "Checking SharePoint Online Tenant"
+    Write-Host "Checking SharePoint Online tenant"
     if ($DisableAddToOneDrive) {
         Write-Host "Disable add to OneDrive button"
         Set-PnPTenant -DisableAddToOneDrive $True
@@ -667,7 +667,7 @@ h3 {
     font-family: Arial, Helvetica, sans-serif;
     color: #666666;
     font-size: 16px;
-    
+
 }
 p {
     font-family: Arial, Helvetica, sans-serif;
