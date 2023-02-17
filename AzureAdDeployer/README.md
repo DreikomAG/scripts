@@ -158,7 +158,9 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 
 - Create default application protectin policy for iOS and Android
 
-- Manage Enterprise application admin consent request policy
+- Manage Enterprise application admin consent request policy <https://learn.microsoft.com/en-us/graph/api/adminconsentrequestpolicy-get?view=graph-rest-1.0&tabs=powershell>
+
+- Check if required Modules are installed and imported -> `#require` is causing performance issues, long script startup times
 
 - List unused licenses
 
