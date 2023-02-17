@@ -21,7 +21,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.2.0"
+$Version = "2.2.1"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -240,11 +240,16 @@ function checkBreakGlassAccountReport {
         $Create
     )
     if ($BgAccount = getBreakGlassAccount) {
-        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3>"
+        $Report = $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3>"
+        $Report = $Report -Replace "<td>False</td>", "<td class='red'>False</td>"
+        return $Report
+
     }
     if ($create) {
         createBreakGlassAccount
-        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3><p>Check console log for credentials</p>"
+        $Report = getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3>" -PostContent "<p>Check console log for credentials</p>"
+        $Report = $Report -Replace "<td>False</td>", "<td class='red'>False</td>"
+        return $Report
     }
     return "<br><h3>BreakGlass account</h3><p>Not found</p>"
 }
@@ -253,6 +258,9 @@ function getBreakGlassAccount {
     Select-MgProfile -Name "beta"
     $BgAccounts = Get-MgUser -Filter "startswith(displayName, 'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName, AccountEnabled, SignInActivity
     Select-MgProfile -Name "v1.0"
+    if (-not $bgAccounts) { 
+        $BgAccounts = Get-MgUser -Filter "startswith(displayName, 'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName, AccountEnabled
+    }
     if (-not $bgAccounts) { return }
     foreach ($BgAccount in $BgAccounts) {
         Add-Member -InputObject $BgAccount -NotePropertyName "GlobalAdmin" -NotePropertyValue (checkGlobalAdminRole $BgAccount.Id)
@@ -334,7 +342,7 @@ function generatePassword {
 <# User MFA section#>
 function checkUserMfaStatusReport {
     Write-Host "Checking user MFA status"
-    $Users = Get-MgUser -All -Filter "UserType eq 'Member'" -Property DisplayName, UserPrincipalName, AssignedLicenses, AccountEnabled
+    $Users = Get-MgUser -All -Filter "UserType eq 'Member'" -Property Id, DisplayName, UserPrincipalName, AssignedLicenses, AccountEnabled
     $Users | ForEach-Object {
         $ProcessedCount++
         if (($_.AssignedLicenses).Count -ne 0) {
@@ -344,7 +352,7 @@ function checkUserMfaStatusReport {
             $LicenseStatus = "Unlicensed"
         }
         Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($_.DisplayName)"
-        [array]$MFAData = Get-MgUserAuthenticationMethod -UserId $_.UserPrincipalName
+        [array]$MFAData = Get-MgUserAuthenticationMethod -UserId $_.Id
         $AuthenticationMethod = @()
         $AdditionalDetails = @()
         foreach ($MFA in $MFAData) {
@@ -408,7 +416,9 @@ function checkUserMfaStatusReport {
         Add-Member -InputObject $_ -NotePropertyName "AdditionalDetail" -NotePropertyValue $AdditionalDetail
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($_.DisplayName)" -Status "Ready" -Completed
-    $Users | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, LicenseStatus, AccountEnabled, MFAStatus, AdditionalDetail -As Table -Fragment -PreContent "<br><h3>User MFA status</h3>" -PostContent "<p>Weak: PhoneAuthentication, EmailAuthentication</p><p>Strong: Fido2, PasswordlessMSAuthenticator, AuthenticatorApp, WindowsHelloForBusiness, SoftwareOath</p>"
+    $Report = $Users | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, LicenseStatus, AccountEnabled, MFAStatus, AdditionalDetail -As Table -Fragment -PreContent "<br><h3>User MFA status</h3>" -PostContent "<p>Weak: PhoneAuthentication, EmailAuthentication</p><p>Strong: Fido2, PasswordlessMSAuthenticator, AuthenticatorApp, WindowsHelloForBusiness, SoftwareOath</p>"
+    $Report = $Report -Replace "<td>True</td><td>Disabled</td>", "<td>True</td><td class='red'>Disabled</td>"
+    return $Report
 }
 
 <# Security Defaults section #>
@@ -503,7 +513,15 @@ function checkSpoTenantReport {
         Write-Host "Disable add to OneDrive button"
         Set-PnPTenant -DisableAddToOneDrive $True
     }
-    Get-PnPTenant | ConvertTo-HTML -As List -Property DisableAddToOneDrive, ConditionalAccessPolicy -Fragment -PreContent "<h3>Tenant settings</h3>"
+    $Report = Get-PnPTenant | ConvertTo-HTML -As List -Property LegacyAuthProtocolsEnabled, DisableAddToOneDrive, ConditionalAccessPolicy, SharingCapability, ODBMembersCanShare, PreventExternalUsersFromResharing, DefaultSharingLinkType, DefaultLinkPermission, FolderAnonymousLinkType, FileAnonymousLinkType, RequireAnonymousLinksExpireInDays -Fragment -PreContent "<h3>Tenant settings</h3>" -PostContent "<p>ConditionalAccessPolicy: AllowFullAccess, AllowLimitedAccess, BlockAccess</p>
+    <p>SharingCapability: Disabled, ExternalUserSharingOnly, ExternalUserAndGuestSharing, ExistingExternalUserSharingOnly</p>
+    <p>DefaultSharingLinkType: None, Direct, Internal, AnonymousAccess</p>"
+    $Report = $Report -Replace "<td>LegacyAuthProtocolsEnabled:</td><td>True</td>", "<td>LegacyAuthProtocolsEnabled:</td><td class='red'>True</td>"
+    $Report = $Report -Replace "<td>DisableAddToOneDrive:</td><td>False</td>", "<td>DisableAddToOneDrive:</td><td class='red'>False</td>"
+    $Report = $Report -Replace "<td>ConditionalAccessPolicy:</td><td>ExternalUserAndGuestSharing</td>", "<td>ConditionalAccessPolicy:</td><td class='red'>ExternalUserAndGuestSharing</td>"
+    $Report = $Report -Replace "<td>PreventExternalUsersFromResharing:</td><td>False</td>", "<td>PreventExternalUsersFromResharing:</td><td class='red'>False</td>"
+    $Report = $Report -Replace "<td>DefaultSharingLinkType:</td><td>AnonymousAccess</td>", "<td>DefaultSharingLinkType:</td><td class='red'>AnonymousAccess</td>"
+    return $Report
 }
 
 <# User mailbox section #>
@@ -712,6 +730,9 @@ tbody tr {
 }
 tbody tr:nth-of-type(even) {
     background-color: #f3f3f3;
+}
+.red {
+    color: red;
 }
 #FootNote {
 font-family: Arial, Helvetica, sans-serif;
