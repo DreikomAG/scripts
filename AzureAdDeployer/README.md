@@ -158,7 +158,11 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 
 - Create default application protectin policy for iOS and Android
 
+- Manage Enterprise application admin consent request policy
+
 - List unused licenses
+
+- Set language of admin account to en-US
 
 ## Credits
 

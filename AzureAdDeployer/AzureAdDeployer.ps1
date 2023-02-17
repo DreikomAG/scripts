@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.3.0"
+$Version = "2.3.1"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -137,7 +137,7 @@ function connectGraph {
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
 User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
 RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
-Policy.ReadWrite.Authorization, Sites.Read.All, AuditLog.Read.All, UserAuthenticationMethod.Read.All"
+Policy.ReadWrite.Authorization, Sites.Read.All, AuditLog.Read.All, UserAuthenticationMethod.Read.All" | Out-Null
     }
     if ((Get-MgContext) -ne "") {
         Write-Host "Connected to Microsoft Graph PowerShell using $((Get-MgContext).Account) account"
@@ -495,14 +495,12 @@ function checkApplicationConsentPolicyReport {
     )
     if ($DisableUserConsent) { disableApplicationUserConsent }
     Write-Host "Checking Enterprise Application consent policy"
-    $Policy = (Get-MgPolicyAuthorizationPolicy -Property DefaultUserRolePermissions).DefaultUserRolePermissions.PermissionGrantPoliciesAssigned
-    if ($Policy -eq "ManagePermissionGrantsForSelf.microsoft-user-default-legacy" ) {
-        return "<br><h3>Enterprise Application user consent policy</h3><p>Allow user consent for all apps: $($Policy)</p>"
-    }  
-    if ($Policy -eq "ManagePermissionGrantsForSelf.microsoft-user-default-low" ) {
-        return "<br><h3>Enterprise Application user consent policy</h3><p>Allow user consent for well known apps: $($Policy)</p>"
-    }
-    return "<br><h3>Enterprise Application user consent policy</h3><p>Do not allow user consent</p>"
+    $Policy = (Get-MgPolicyAuthorizationPolicy -Property DefaultUserRolePermissions).DefaultUserRolePermissions
+    Add-Member -InputObject $Policy -NotePropertyName "PermissionGrantPoliciesAssigned" -NotePropertyValue ([string]$Policy.PermissionGrantPoliciesAssigned) -Force
+    $Report = $Policy | ConvertTo-Html -As List -Property PermissionGrantPoliciesAssigned -Fragment -PreContent "<br><h3>Enterprise Application user consent policy</h3>" -PostContent "<p>PermissionGrantPoliciesAssigned: empty (user consent not allowed), microsoft-user-default-legacy (user consent allowed for all apps), microsoft-user-default-low (user consent allowed for low permission apps)</p>"
+    $Report = $Report -Replace "<td>PermissionGrantPoliciesAssigned:</td><td>ManagePermissionGrantsForSelf.microsoft-user-default-legacy</td>", "<td>PermissionGrantPoliciesAssigned:</td><td class='red'>ManagePermissionGrantsForSelf.microsoft-user-default-legacy</td>"
+    $Report = $Report -Replace "<td>PermissionGrantPoliciesAssigned:</td><td>ManagePermissionGrantsForSelf.microsoft-user-default-low</td>", "<td>PermissionGrantPoliciesAssigned:</td><td class='orange'>ManagePermissionGrantsForSelf.microsoft-user-default-low</td>"
+    return $Report
 }
 function disableApplicationUserConsent {
     Write-Host "Disable Enterprise Application user consent"
