@@ -21,7 +21,8 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.1.0"
+$Version = "2.2.0"
+$VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
 $LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
@@ -49,7 +50,7 @@ $script:DisableAddToOneDrive = $DisableAddToOneDrive
 $script:AddExchangeOnlineReport = $AddExchangeOnlineReport
 $script:AddSharePointOnlineReport = $AddSharePointOnlineReport
 
-Write-Host "AzureAdDeployer version" $Version
+Write-Host $VersionMessage
 
 <# Interactive inputs section #>
 function CheckInteractiveMode {
@@ -129,7 +130,7 @@ function connectGraph {
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
 User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
 RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
-Policy.ReadWrite.Authorization, Sites.Read.All"
+Policy.ReadWrite.Authorization, Sites.Read.All, AuditLog.Read.All"
     }
     if ((Get-MgContext) -ne "") {
         Write-Host "Connected to Microsoft Graph PowerShell using $((Get-MgContext).Account) account"
@@ -239,20 +240,23 @@ function checkBreakGlassAccountReport {
         $Create
     )
     if ($BgAccount = getBreakGlassAccount) {
-        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3>"
+        return $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3>"
     }
     if ($create) {
         createBreakGlassAccount
-        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3><p>Check console log for credentials</p>"
+        return getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3><p>Check console log for credentials</p>"
     }
     return "<br><h3>BreakGlass account</h3><p>Not found</p>"
 }
 function getBreakGlassAccount {
     Write-Host "Checking BreakGlass account"
-    $BgAccounts = Get-MgUser -Filter "startswith(displayName, 'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName, AccountEnabled
+    Select-MgProfile -Name "beta"
+    $BgAccounts = Get-MgUser -Filter "startswith(displayName, 'BreakGlass ')" -Property Id, DisplayName, UserPrincipalName, AccountEnabled, SignInActivity
+    Select-MgProfile -Name "v1.0"
     if (-not $bgAccounts) { return }
     foreach ($BgAccount in $BgAccounts) {
         Add-Member -InputObject $BgAccount -NotePropertyName "GlobalAdmin" -NotePropertyValue (checkGlobalAdminRole $BgAccount.Id)
+        Add-Member -InputObject $BgAccount -NotePropertyName "LastSignIn" -NotePropertyValue $BgAccount.SignInActivity.LastSignInDateTime
     }
     return $BgAccounts
 }
@@ -709,7 +713,7 @@ tbody tr {
 tbody tr:nth-of-type(even) {
     background-color: #f3f3f3;
 }
-#CreationDate {
+#FootNote {
 font-family: Arial, Helvetica, sans-serif;
 color: #666666;
 font-size: 12px;
@@ -722,7 +726,8 @@ $Desktop = [Environment]::GetFolderPath("Desktop")
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 $ReportName = ("Microsoft365-Report-$($script:CustomerName).html").Replace(" ", "")
 $PostContentHtml = @"
-<p id='CreationDate'>Creation date: $(Get-Date)</p>
+<p id='FootNote'>$($VersionMessage)</p>
+<p id='FootNote'>Creation date: $(Get-Date)</p>
 <img src="$($LogoImageUrl)" width='75'>
 "@
 Write-Host "Generating HTML report:" $ReportName
