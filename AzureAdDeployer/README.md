@@ -156,6 +156,12 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 
 - Create default Conditinal Access polices
 
+- List trusted locations
+
+- Check DKIM / DMARC
+
+- Find external e-mail forwardings
+
 - Create default application protectin policy for iOS and Android
 
 - Manage Enterprise application admin consent request policy <https://learn.microsoft.com/en-us/graph/api/adminconsentrequestpolicy-get?view=graph-rest-1.0&tabs=powershell>
@@ -163,6 +169,14 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 - Check if required Modules are installed and imported -> `#require` is causing performance issues, long script startup times
 
 - List unused licenses
+
+- List Guest accounts
+
+- List externally shared files
+
+- Inegrate Azure PowerShell module <https://learn.microsoft.com/en-us/powershell/azure/install-az-ps?view=azps-9.4.0>
+
+  - Check if budget is set
 
 - Set language of admin account to en-US
 
