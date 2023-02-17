@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.4.0"
+$Version = "2.4.1"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -535,6 +535,7 @@ function checkSpoTenantReport {
 function checkMailDomainReport {
     Write-Host "Checking domains"
     $Domains = Get-DkimSigningConfig | Select-Object -Property Id, IsDefault, @{Name = "DKIM"; Expression = { $_.Enabled } }
+    if (-not ($Domains)) { $Domains = Get-AcceptedDomain | Select-Object -Property Id, "Default", @{Name = "DKIM"; Expression = { $false } } }
     $Report = $Domains | ConvertTo-Html -As Table -Fragment -PreContent "<h3>Domains</h3>"
     $Report = $Report -Replace "<td>False</td><td>False</td>", "<td>False</td><td class='red'>False</td>"
     $Report = $Report -Replace "<td>True</td><td>False</td>", "<td>True</td><td class='red'>False</td>"
