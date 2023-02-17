@@ -21,7 +21,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.2.3"
+$Version = "2.3.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -526,6 +526,19 @@ function checkSpoTenantReport {
     return $Report
 }
 
+<# Mail connector section#>
+function checkMailConnectorReport {
+    Write-Host "Checking mail connectors"
+    if (-not ($Inbound = Get-InboundConnector)) { $InboundReport = "<h3>Inbound mail connector</h3><p>Not found</p>" }
+    else { $InboundReport = $Inbound | ConvertTo-Html -As Table -Property Name, SenderDomains, SenderIPAddresses, Enabled -Fragment -PreContent "<h3>Inbound mail connector</h3>" }
+    if (-not ($Outbound = Get-OutboundConnector -IncludeTestModeConnectors:$true)) { $OutboundReport = "<br><h3>Outbound mail connector</h3><p>Not found</p>" }
+    else { $OutboundReport = $Outbound | ConvertTo-Html -As Table -Property Name, RecipientDomains, SmartHosts, Enabled -Fragment -PreContent "<br><h3>Outbound mail connector</h3>" }
+    $Report = @()
+    $Report += $InboundReport
+    $Report += $OutboundReport
+    return $Report
+}
+
 <# User mailbox section #>
 function checkMailboxReport {
     param(
@@ -533,7 +546,7 @@ function checkMailboxReport {
     )
     Write-Host "Checking user mailboxes"
     if ( -not ($Mailboxes = Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize:Unlimited -Properties DisplayName, UserPrincipalName)) {
-        return "<br><h3>user mailbox report</h3><p>Not found</p>"
+        return "<br><h3>user mailbox</h3><p>Not found</p>"
     }
     if ($Language) {
         setMailboxLang -Mailbox $Mailboxes
@@ -546,7 +559,7 @@ function checkMailboxReport {
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)" -Status "Ready" -Completed
     return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, LoginAllowed `
-        -Fragment -PreContent "<h3>User mailbox report</h3>"
+        -Fragment -PreContent "<br><h3>User mailbox</h3>"
 }
 function setMailboxLang {
     param(
@@ -566,7 +579,7 @@ function checkSharedMailboxReport {
     Write-Host "Checking shared mailboxes"
     if ( -not ($Mailboxes = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
             UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled)) {
-        return "<br><h3>Shared mailbox report</h3><p>Not found</p>"
+        return "<br><h3>Shared mailbox</h3><p>Not found</p>"
     }
     if ($Language) { setMailboxLang -Mailbox $Mailboxes }
     if ($DisableLogin) { disableUserAccount $Mailboxes }
@@ -583,7 +596,7 @@ function checkSharedMailboxReport {
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)" -Status "Ready" -Completed
     $Report = $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
-    MessageCopyForSendOnBehalfEnabled, LoginAllowed -Fragment -PreContent "<br><h3>Shared mailbox report</h3>"
+    MessageCopyForSendOnBehalfEnabled, LoginAllowed -Fragment -PreContent "<br><h3>Shared mailbox</h3>"
     $Report = $Report -Replace "<td>True</td><td>True</td><td>True</td>", "<td>True</td><td>True</td><td class='red'>True</td>"
     $Report = $Report -Replace "<td>False</td><td>False</td><td>True</td>", "<td>False</td><td>False</td><td class='red'>True</td>"
     $Report = $Report -Replace "<td>True</td><td>False</td><td>True</td>", "<td>True</td><td>False</td><td class='red'>True</td>"
@@ -615,14 +628,14 @@ function checkUnifiedMailboxReport {
     )
     Write-Host "Checking unified mailboxes"
     if ( -not ($Mailboxes = Get-UnifiedGroup -ResultSize Unlimited)) {
-        return "<br><h3>Unified mailbox report</h3><p>Not found</p>"
+        return "<br><h3>Unified mailbox</h3><p>Not found</p>"
     }
     if ($HideFromClient) {
         Write-Host "Hiding unified mailboxes from outlook client"
         $Mailboxes | Set-UnifiedGroup -HiddenFromExchangeClientsEnabled:$true -HiddenFromAddressListsEnabled:$false
         $Mailboxes = Get-UnifiedGroup -ResultSize Unlimited 
     }
-    return $Mailboxes | Sort-Object -Property PrimarySmtpAddress | ConvertTo-HTML -As Table -Property DisplayName, PrimarySmtpAddress, HiddenFromAddressListsEnabled, HiddenFromExchangeClientsEnabled -Fragment -PreContent "<br><h3>Unified mailbox report</h3>"
+    return $Mailboxes | Sort-Object -Property PrimarySmtpAddress | ConvertTo-HTML -As Table -Property DisplayName, PrimarySmtpAddress, HiddenFromAddressListsEnabled, HiddenFromExchangeClientsEnabled -Fragment -PreContent "<br><h3>Unified mailbox</h3>"
 }
 
 <# Script logic start section #>
@@ -652,6 +665,7 @@ if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) {
 }
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) {
     $Report += "<br><hr><h2>Exchange Online</h2>"
+    $Report += checkMailConnectorReport
     $Report += checkMailboxReport -Language $script:SetMailboxLanguage
     $Report += checkSharedMailboxReport -Language $script:SetMailboxLanguage -DisableLogin $script:DisableSharedMailboxLogin -EnableCopy $script:EnableSharedMailboxCopyToSent
     $Report += checkUnifiedMailboxReport -HideFromClient $script:HideUnifiedMailboxFromOutlookClient

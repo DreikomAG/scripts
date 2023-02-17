@@ -32,6 +32,8 @@
 
 ### Exchange Online
 
+- Mail connector: show
+
 - User mailbox: show, set language
 
 - Shared mailbox: show, set language, disable login, enable copy to sent
@@ -144,7 +146,6 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 
 `.\AzureAdDeployer.ps1 -DisableSecurityDefaults`
 
-
 ## ToDo
 
 - Manage Self-service password reset (no API available)
@@ -154,8 +155,6 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 - Manage users allowed to join devices to aad (no API available)
 
 - Create default Conditinal Access polices
-
-- List verified Domains
 
 - Create default application protectin policy for iOS and Android
 
