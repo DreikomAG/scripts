@@ -21,7 +21,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.2.2"
+$Version = "2.2.3"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -582,9 +582,13 @@ function checkSharedMailboxReport {
         $MailboxReport += checkMailboxLoginAndLocation $Mailbox
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)" -Status "Ready" -Completed
-    return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
-    MessageCopyForSendOnBehalfEnabled, LoginAllowed `
-        -Fragment -PreContent "<br><h3>Shared mailbox report</h3>"
+    $Report = $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
+    MessageCopyForSendOnBehalfEnabled, LoginAllowed -Fragment -PreContent "<br><h3>Shared mailbox report</h3>"
+    $Report = $Report -Replace "<td>True</td><td>True</td><td>True</td>", "<td>True</td><td>True</td><td class='red'>True</td>"
+    $Report = $Report -Replace "<td>False</td><td>False</td><td>True</td>", "<td>False</td><td>False</td><td class='red'>True</td>"
+    $Report = $Report -Replace "<td>True</td><td>False</td><td>True</td>", "<td>True</td><td>False</td><td class='red'>True</td>"
+    $Report = $Report -Replace "<td>False</td><td>True</td><td>True</td>", "<td>False</td><td>True</td><td class='red'>True</td>"
+    return $Report
 }
 function checkMailboxLoginAndLocation {
     param (
