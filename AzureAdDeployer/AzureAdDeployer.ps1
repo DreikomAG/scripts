@@ -21,7 +21,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.2.1"
+$Version = "2.2.2"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -130,7 +130,7 @@ function connectGraph {
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
 User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
 RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
-Policy.ReadWrite.Authorization, Sites.Read.All, AuditLog.Read.All"
+Policy.ReadWrite.Authorization, Sites.Read.All, AuditLog.Read.All, UserAuthenticationMethod.Read.All"
     }
     if ((Get-MgContext) -ne "") {
         Write-Host "Connected to Microsoft Graph PowerShell using $((Get-MgContext).Account) account"
@@ -418,6 +418,7 @@ function checkUserMfaStatusReport {
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($_.DisplayName)" -Status "Ready" -Completed
     $Report = $Users | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, LicenseStatus, AccountEnabled, MFAStatus, AdditionalDetail -As Table -Fragment -PreContent "<br><h3>User MFA status</h3>" -PostContent "<p>Weak: PhoneAuthentication, EmailAuthentication</p><p>Strong: Fido2, PasswordlessMSAuthenticator, AuthenticatorApp, WindowsHelloForBusiness, SoftwareOath</p>"
     $Report = $Report -Replace "<td>True</td><td>Disabled</td>", "<td>True</td><td class='red'>Disabled</td>"
+    $Report = $Report -Replace "<td>True</td><td>Weak</td>", "<td>True</td><td class='orange'>Weak</td>"
     return $Report
 }
 
@@ -518,7 +519,8 @@ function checkSpoTenantReport {
     <p>DefaultSharingLinkType: None, Direct, Internal, AnonymousAccess</p>"
     $Report = $Report -Replace "<td>LegacyAuthProtocolsEnabled:</td><td>True</td>", "<td>LegacyAuthProtocolsEnabled:</td><td class='red'>True</td>"
     $Report = $Report -Replace "<td>DisableAddToOneDrive:</td><td>False</td>", "<td>DisableAddToOneDrive:</td><td class='red'>False</td>"
-    $Report = $Report -Replace "<td>ConditionalAccessPolicy:</td><td>ExternalUserAndGuestSharing</td>", "<td>ConditionalAccessPolicy:</td><td class='red'>ExternalUserAndGuestSharing</td>"
+    $Report = $Report -Replace "<td>ConditionalAccessPolicy:</td><td>AllowFullAccess</td>", "<td>ConditionalAccessPolicy:</td><td class='red'>AllowFullAccess</td>"
+    $Report = $Report -Replace "<td>SharingCapability:</td><td>ExternalUserAndGuestSharing</td>", "<td>SharingCapability:</td><td class='red'>ExternalUserAndGuestSharing</td>"
     $Report = $Report -Replace "<td>PreventExternalUsersFromResharing:</td><td>False</td>", "<td>PreventExternalUsersFromResharing:</td><td class='red'>False</td>"
     $Report = $Report -Replace "<td>DefaultSharingLinkType:</td><td>AnonymousAccess</td>", "<td>DefaultSharingLinkType:</td><td class='red'>AnonymousAccess</td>"
     return $Report
@@ -733,6 +735,9 @@ tbody tr:nth-of-type(even) {
 }
 .red {
     color: red;
+}
+.orange {
+    color: orange;
 }
 #FootNote {
 font-family: Arial, Helvetica, sans-serif;
