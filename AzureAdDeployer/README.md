@@ -32,6 +32,8 @@
 
 ### Exchange Online
 
+- Domains: show
+
 - Mail connector: show
 
 - User mailbox: show, set language
@@ -158,7 +160,7 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 
 - List trusted locations
 
-- Check DKIM / DMARC
+- Check DMARC
 
 - Find external e-mail forwardings
 
@@ -259,5 +261,69 @@ function createAndroidAppProtectionPolicy {
         displayName = "Test"
     }
     New-MgDeviceAppManagementAndroidManagedAppProtection -BodyParameter $Body
+}
+```
+
+### List DMARC
+
+```PowerShell
+function Get-DMARCRecord {
+    [CmdletBinding()]
+    param(
+        [Parameter(
+        )][string]$Name
+    )
+    begin {
+        $SplatParameters = @{
+            'Type'        = 'TXT'
+            'Name'        = "_dmarc.$($Name)"
+            'ErrorAction' = 'SilentlyContinue'
+        }
+        $DMARCObject = New-Object System.Collections.Generic.List[System.Object]
+    }
+    Process {
+        $DMARC = Resolve-DnsName @SplatParameters | Select-Object -ExpandProperty strings -ErrorAction SilentlyContinue
+        if ($null -eq $DMARC) {
+            $DmarcAdvisory = "Does not have a DMARC record. This domain is at risk to being abused by phishers and spammers."
+        }
+        Else {
+            $Policy = ""
+            switch -Regex ($DMARC) {
+                ('p=none') {
+                    $DmarcAdvisory = "Domain has a valid DMARC record but the DMARC (subdomain) policy does not prevent abuse of your domain by phishers and spammers."
+                    $Policy = "none"
+                }
+                ('p=quarantine') {
+                    $DmarcAdvisory = "Domain has a DMARC record and it is set to p=quarantine. To fully take advantage of DMARC, the policy should be set to p=reject."
+                    $Policy = "quarantine"
+                }
+                ('p=reject') {
+                    $DmarcAdvisory = "Domain has a DMARC record and your DMARC policy will prevent abuse of your domain by phishers and spammers. "
+                    $Policy = "reject"
+                }
+                ('sp=none') {
+                    $DmarcAdvisory += "The subdomain policy does not prevent abuse of your domain by phishers and spammers."
+                    $Policy = "none"
+                }
+                ('sp=quarantine') {
+                    $DmarcAdvisory += "The subdomain has a DMARC record and it is set to sp=quarantine. To prevent you subdomains configure the policy to sp=reject."
+                    $Policy = "quarantine"
+                }
+                ('sp=reject') {
+                    $DmarcAdvisory += "The subdomain policy prevent abuse of your domain by phishers and spammers."
+                    $Policy = "reject"
+                }
+            }
+        }
+    } 
+    end {
+        $DMARCReturnValues = New-Object psobject
+        $DMARCReturnValues | Add-Member NoteProperty "Name" $Name
+        $DMARCReturnValues | Add-Member NoteProperty "DmarcRecord" "$($DMARC)"
+        $DMARCReturnValues | Add-Member NoteProperty "DmarcAdvisory" $DmarcAdvisory
+        $DMARCReturnValues | Add-Member NoteProperty "Policy" $Policy
+        $DMARCObject.Add($DMARCReturnValues)
+        $DMARCReturnValues
+    }
 }
 ```

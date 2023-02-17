@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.3.1"
+$Version = "2.4.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -531,11 +531,21 @@ function checkSpoTenantReport {
     return $Report
 }
 
+<# Mail Domain section #>
+function checkMailDomainReport {
+    Write-Host "Checking domains"
+    $Domains = Get-DkimSigningConfig | Select-Object -Property Id, IsDefault, @{Name = "DKIM"; Expression = { $_.Enabled } }
+    $Report = $Domains | ConvertTo-Html -As Table -Fragment -PreContent "<h3>Domains</h3>"
+    $Report = $Report -Replace "<td>False</td><td>False</td>", "<td>False</td><td class='red'>False</td>"
+    $Report = $Report -Replace "<td>True</td><td>False</td>", "<td>True</td><td class='red'>False</td>"
+    return $Report
+}
+
 <# Mail connector section#>
 function checkMailConnectorReport {
     Write-Host "Checking mail connectors"
-    if (-not ($Inbound = Get-InboundConnector)) { $InboundReport = "<h3>Inbound mail connector</h3><p>Not found</p>" }
-    else { $InboundReport = $Inbound | ConvertTo-Html -As Table -Property Name, SenderDomains, SenderIPAddresses, Enabled -Fragment -PreContent "<h3>Inbound mail connector</h3>" }
+    if (-not ($Inbound = Get-InboundConnector)) { $InboundReport = "<br><h3>Inbound mail connector</h3><p>Not found</p>" }
+    else { $InboundReport = $Inbound | ConvertTo-Html -As Table -Property Name, SenderDomains, SenderIPAddresses, Enabled -Fragment -PreContent "<br><h3>Inbound mail connector</h3>" }
     if (-not ($Outbound = Get-OutboundConnector -IncludeTestModeConnectors:$true)) { $OutboundReport = "<br><h3>Outbound mail connector</h3><p>Not found</p>" }
     else { $OutboundReport = $Outbound | ConvertTo-Html -As Table -Property Name, RecipientDomains, SmartHosts, Enabled -Fragment -PreContent "<br><h3>Outbound mail connector</h3>" }
     $Report = @()
@@ -670,6 +680,7 @@ if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) {
 }
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) {
     $Report += "<br><hr><h2>Exchange Online</h2>"
+    $Report += checkMailDomainReport
     $Report += checkMailConnectorReport
     $Report += checkMailboxReport -Language $script:SetMailboxLanguage
     $Report += checkSharedMailboxReport -Language $script:SetMailboxLanguage -DisableLogin $script:DisableSharedMailboxLogin -EnableCopy $script:EnableSharedMailboxCopyToSent
