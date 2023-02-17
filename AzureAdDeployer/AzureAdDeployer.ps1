@@ -1,4 +1,11 @@
-# Maintainer: https://github.com/swissbuechi
+<#
+=============================================================================================
+Name:           AzureAdDeployer
+Description:    This script generates a HTML report for AAD, SPO, EXO
+Website:        https://github.com/DreikomAG/scripts/tree/main/AzureAdDeployer
+Script by:      https://github.com/swissbuechi
+============================================================================================
+#>
 # Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Identity.DirectoryManagement, Microsoft.Graph.DeviceManagement.Enrolment, Microsoft.Graph.Identity.SignIns, Microsoft.Graph.Devices.CorporateManagement, ExchangeOnlineManagement, PnP.PowerShell
 [CmdletBinding()]
 Param(
