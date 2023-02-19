@@ -162,7 +162,13 @@ Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux r
 
 - Find external e-mail forwardings
 
-- Restrict access do AAD Portal <https://blog.admindroid.com/restrict-user-access-to-azure-ad-to-prevent-data-exposure/>
+- Restrict access do AAD Portal <https://office365itpros.com/2022/11/29/azure-ad-tenant-creation/> `Get-MgPolicyAuthorizationPolicy | Select-Object -ExpandProperty DefaultUserRolePermissions | Format-List`
+
+- Restrict access to MsolPowerShell <https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.identity.signins/update-mgpolicyauthorizationpolicy?view=graph-powershell-1.0>
+
+- Restrict access to PowerShell for edu tenants <https://learn.microsoft.com/en-us/schooldatasync/blocking-powershell-for-edu>
+
+- Restrict non-admin users from creating tenants (AAD)
 
 - Password policy <https://learn.microsoft.com/en-us/azure/active-directory/authentication/concept-password-ban-bad>
 
