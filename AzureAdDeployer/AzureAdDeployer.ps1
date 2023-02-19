@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.6.0"
+$Version = "2.7.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -549,47 +549,55 @@ function checkMailDomainReport {
     if (-not ($Domains)) { $Domains = Get-AcceptedDomain | Select-Object -Property Id, "Default", @{Name = "DKIM"; Expression = { $false } } }
     $DomainsReport = @()
     foreach ($Domain in $Domains) {
-        $DomainsReport += checkDmarc -Domain $Domain
+        $Domain = checkDMARC -Domain $Domain
+        $Domain = checkSPF -Domain $Domain
+        $DomainsReport += $Domain
     }
-    $Report = $DomainsReport | ConvertTo-Html -As Table -Property Id, DKIM, DMARC, "DMARC record", "DMARC hint", "Default" -Fragment -PreContent "<h3>Domains</h3>"
-    $Report = $Report -Replace "<td>False</td><td>False</td>", "<td class='red'>False</td><td class='red'>False</td>"
-    $Report = $Report -Replace "<td>True</td><td>False</td>", "<td>True</td><td class='red'>False</td>"
-    $Report = $Report -Replace "<td>False</td><td>True</td>", "<td class='red'>False</td><td>True</td>"
-    $Report = $Report -Replace "<td>To fully take advantage, policy should be p=reject</td>", "<td class='orange'>To fully take advantage, policy should be p=reject</td>"
-    $Report = $Report -Replace "<td>Does not prevent abuse from phishers and spammers</td>", "<td class='red'>Does not prevent abuse from phishers and spammers</td>"
+    $Report = $DomainsReport | ConvertTo-Html -As Table -Property Id, DKIM, DMARC, SPF, "DMARC record", "SPF record", "DMARC hint", "SPF hint", "Default" -Fragment -PreContent "<h3>Domains</h3>"
+    $Report = $Report -Replace "<td>False</td><td>False</td><td>False</td>", "<td class='red'>False</td><td class='red'>False</td><td class='red'>False</td>"
+    $Report = $Report -Replace "<td>False</td><td>False</td><td>True</td>", "<td class='red'>False</td><td class='red'>False</td><td>True</td>"
+    $Report = $Report -Replace "<td>True</td><td>False</td><td>False</td>", "<td>True</td><td class='red'>False</td><td class='red'>False</td>"
+    $Report = $Report -Replace "<td>True</td><td>False</td><td>True</td>", "<td>True</td><td class='red'>False</td><td>True</td>"
+    $Report = $Report -Replace "<td>False</td><td>True</td><td>False</td>", "<td class='red'>False</td><td>True</td><td class='red'>False</td>"
+    $Report = $Report -Replace "<td>False</td><td>True</td><td>True</td>", "<td class='red'>False</td><td>True</td><td>True</td>"
+    $Report = $Report -Replace "<td>Should be p=reject</td>", "<td class='orange'>Should be p=reject</td>"
+    $Report = $Report -Replace "<td>Not sufficiently stricth</td>", "<td class='orange'>Not sufficiently strict</td>"
+    $Report = $Report -Replace "<td>Not effective enough</td>", "<td class='red'>Not effective enough</td>"
+    $Report = $Report -Replace "<td>Does not protect</td>", "<td class='red'>Does not protect</td>"
+    $Report = $Report -Replace "<td>No qualifier found</td>", "<td class='red'>No qualifier found</td>"
     return $Report
 }
-function checkDmarc {
+function checkDMARC {
     param($Domain)
-    if ($PSVersionTable.Platform -eq "Unix") { $DMARCRecord = (Resolve-Dns -Query "_dmarc.$($Domain.Id)" -QueryType txt | Select-Object -Expand Answers).Text }
+    if ($PSVersionTable.Platform -eq "Unix") { $DMARCRecord = (Resolve-Dns -Query "_dmarc.$($Domain.Id)" -QueryType TXT | Select-Object -Expand Answers).Text }
     else { $DMARCRecord = Resolve-DnsName -Name "_dmarc.$($Domain.Id)" -Type TXT -ErrorAction SilentlyContinue | Select-Object -ExpandProperty strings }
     if ($null -eq $DMARCRecord ) {
         $DMARC = $false
     }
-    Else {
+    else {
         switch -Regex ($DMARCRecord ) {
                 ('p=none') {
-                $DmarcHint = "Does not prevent abuse from phishers and spammers"
+                $DmarcHint = "Does not protect"
                 $DMARC = $true
             }
                 ('p=quarantine') {
-                $DmarcHint = "To fully take advantage, policy should be p=reject"
+                $DmarcHint = "Should be p=reject"
                 $DMARC = $true
             }
                 ('p=reject') {
-                $DmarcHint = "Will prevent abuse from phishers and spammers"
+                $DmarcHint = "Will protect"
                 $DMARC = $true
             }
                 ('sp=none') {
-                $DmarcHint += "Does not prevent abuse from phishers and spammers"
+                $DmarcHint += "Does not protect"
                 $DMARC = $true
             }
                 ('sp=quarantine') {
-                $DmarcHint += "To fully take advantage, policy should be p=reject"
+                $DmarcHint += "Should be p=reject"
                 $DMARC = $true
             }
                 ('sp=reject') {
-                $DmarcHint += "Will prevent abuse from phishers and spammers"
+                $DmarcHint += "Will protect"
                 $DMARC = $true
             }
         }
@@ -597,6 +605,52 @@ function checkDmarc {
     $Domain | Add-Member NoteProperty "DMARC" $DMARC
     $Domain | Add-Member NoteProperty "DMARC record" "$($DMARCRecord )"
     $Domain | Add-Member NoteProperty "DMARC hint" $DmarcHint
+    return $Domain
+}
+function checkSPF {
+    param($Domain)
+    if ($PSVersionTable.Platform -eq "Unix") { $SPFRecord = (Resolve-Dns -Query $Domain.Id -QueryType TXT | Select-Object -Expand Answers).Text | where-object { $_ -match "v=spf1" } }
+    else { $SPFRecord = Resolve-DnsName -Name $Name -Type TXT -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } | Select-Object -ExpandProperty strings }
+    if ($SPFRecord -match "redirect") {
+        $redirect = $SPFRecord.Split(" ")
+        $RedirectName = $redirect -match "redirect" -replace "redirect="
+        if ($PSVersionTable.Platform -eq "Unix") { $SPFRecord = (Resolve-Dns -Query $RedirectName -QueryType TXT | Select-Object -Expand Answers).Text | where-object { $_ -match "v=spf1" } }
+        else { $SPFRecord = Resolve-DnsName -Name $RedirectName -Type TXT -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } | Select-Object -ExpandProperty strings }
+    }
+    if ($null -eq $SPFRecord) {
+        $SPF = $false
+    }
+    if ($SPFRecord -is [array]) {
+        $SPFHint = "More than one SPF-record"
+        $SPF = $true
+    }
+    Else {
+        switch -Regex ($SPFRecord) {
+            '~all' {
+                $SPFHint = "Not sufficiently strict"
+                $SPF = $true
+            }
+            '-all' {
+                $SPFHint = "Sufficiently strict"
+                $SPF = $true
+            }
+            "\?all" {
+                $SPFHint = "Not effective enough"
+                $SPF = $true
+            }
+            '\+all' {
+                $SPFHint = "Not effective enough"
+                $SPF = $true
+            }
+            Default {
+                $SPFHint = "No qualifier found"
+                $SPF = $true
+            }
+        }
+    }
+    $Domain | Add-Member NoteProperty "SPF" "$($SPF)"
+    $Domain | Add-Member NoteProperty "SPF record" "$($SPFRecord)"
+    $Domain | Add-Member NoteProperty "SPF hint" $SPFHint
     return $Domain
 }
 

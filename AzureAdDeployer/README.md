@@ -32,7 +32,7 @@
 
 ### Exchange Online
 
-- Domains: show, check DKIM/DMARC
+- Domains: show, check DKIM/DMARC/SPF
 
 - Mail connector: show
 
@@ -162,8 +162,6 @@ Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux r
 
 - Find external e-mail forwardings
 
-- Check SPF record
-
 - Restrict access do AAD Portal <https://blog.admindroid.com/restrict-user-access-to-azure-ad-to-prevent-data-exposure/>
 
 - Password policy <https://learn.microsoft.com/en-us/azure/active-directory/authentication/concept-password-ban-bad>
@@ -192,6 +190,9 @@ Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux r
 
 - <a href="https://www.flaticon.com/free-icons/error" title="error icons">Error icons created by Smashicons - Flaticon</a>
 
+### DMARC and SPF check
+
+- <https://github.com/T13nn3s/Invoke-SpfDkimDmarc>
 
 ## Template code for later functions
 
