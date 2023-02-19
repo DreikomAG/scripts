@@ -164,6 +164,10 @@ Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
 
 - Find external e-mail forwardings
 
+- Restrict access do AAD Portal <https://blog.admindroid.com/restrict-user-access-to-azure-ad-to-prevent-data-exposure/>
+
+- Password policy <https://learn.microsoft.com/en-us/azure/active-directory/authentication/concept-password-ban-bad>
+
 - Create default application protectin policy for iOS and Android
 
 - Manage Enterprise application admin consent request policy <https://learn.microsoft.com/en-us/graph/api/adminconsentrequestpolicy-get?view=graph-rest-1.0&tabs=powershell>
