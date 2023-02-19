@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.5.0"
+$Version = "2.5.1"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -551,7 +551,7 @@ function checkMailDomainReport {
 function checkDmarc {
     param($Domain)
     if ($PSVersionTable.Platform -eq "Unix") { $DMARCRecord = (Resolve-Dns -Query "_dmarc.$($Domain.Id)" -QueryType txt | Select-Object -Expand Answers).Text }
-    else { $DMARCRecord = Resolve-DnsName -Name "_dmarc.$($Domain.Id)" -Type TXT | Select-Object -ExpandProperty strings }
+    else { $DMARCRecord = Resolve-DnsName -Name "_dmarc.$($Domain.Id)" -Type TXT -ErrorAction SilentlyContinue | Select-Object -ExpandProperty strings }
     if ($null -eq $DMARCRecord ) {
         $DMARC = $false
     }
@@ -559,7 +559,7 @@ function checkDmarc {
         switch -Regex ($DMARCRecord ) {
                 ('p=none') {
                 $DmarcHint = "Does not prevent abuse from phishers and spammers"
-                $DMARC = $false
+                $DMARC = $true
             }
                 ('p=quarantine') {
                 $DmarcHint = "To fully take advantage, policy should be p=reject"
@@ -571,7 +571,7 @@ function checkDmarc {
             }
                 ('sp=none') {
                 $DmarcHint += "Does not prevent abuse from phishers and spammers"
-                $DMARC = $false
+                $DMARC = $true
             }
                 ('sp=quarantine') {
                 $DmarcHint += "To fully take advantage, policy should be p=reject"
