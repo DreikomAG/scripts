@@ -162,6 +162,8 @@ Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux r
 
 - Find external e-mail forwardings
 
+- Check SPF record
+
 - Restrict access do AAD Portal <https://blog.admindroid.com/restrict-user-access-to-azure-ad-to-prevent-data-exposure/>
 
 - Password policy <https://learn.microsoft.com/en-us/azure/active-directory/authentication/concept-password-ban-bad>
