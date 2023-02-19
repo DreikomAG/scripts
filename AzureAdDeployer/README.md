@@ -176,7 +176,7 @@ Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux r
 
 - List unused licenses
 
-- List Guest accounts
+- List Guest accounts <https://blog.atwork.at/post/Identify-guest-users-with-Graph>
 
 - List externally shared files
 
