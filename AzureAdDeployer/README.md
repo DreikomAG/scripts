@@ -28,7 +28,7 @@
 
 - Add to OneDrive: show, disable
 
-- ConditionalAccessPolicy: show
+- ConditionalAccessPolicy: show, list locations
 
 ### Exchange Online
 
@@ -159,8 +159,6 @@ Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux r
 - Manage users allowed to join devices to aad (no API available)
 
 - Create default Conditinal Access polices
-
-- List trusted locations
 
 - Find external e-mail forwardings
 

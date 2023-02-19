@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.5.1"
+$Version = "2.6.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -460,15 +460,26 @@ function updateSecurityDefaults {
 }
 
 <# Conditional Access section #>
-function getConditionalAccessPolicy {
-    Write-Host "Checking Conditional Access policies"
-    return Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName, State
-}
 function checkConditionalAccessPolicyReport {
-    if ($Policy = getConditionalAccessPolicy) {
+    Write-Host "Checking Conditional Access policies"
+    if ($Policy = Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName, State) {
         return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access policies</h3>"
     }
     return "<br><h3>Conditional Access policies</h3><p>Not found</p>"
+}
+function checkNamedLocationReport {
+    Write-Host "Checking named locations"
+    if ($Locations = Get-MgIdentityConditionalAccessNamedLocation) {
+        return $Locations | Select-Object -Property DisplayName, @{Name = "Trusted"; Expression = { $_.additionalProperties["isTrusted"] } }, @{Name = "IPRange"; Expression = {
+                $IpRangesReport = @()
+                foreach ($IpRange in ($_.additionalProperties["ipRanges"])) {
+                    $IpRangesReport += $IpRange["cidrAddress"]
+                }
+                return $IpRangesReport
+            }
+        }, @{Name = "Countries"; Expression = { $_.additionalProperties["countriesAndRegions"] } } | ConvertTo-HTML -As Table -Fragment -PreContent "<br><h3>Named locations</h3>"
+    }
+    return "<br><h3>Named locations</h3><p>Not found</p>"
 }
 
 <# Application protection polices section#>
@@ -719,6 +730,7 @@ $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
 $Report += checkUserMfaStatusReport
 $Report += checkSecurityDefaultsReport -Enable $script:EnableSecurityDefaults -Disable $script:DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
+$Report += checkNamedLocationReport
 $Report += checkAppProtectionPolicesReport
 $Report += checkApplicationConsentPolicyReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent
 
