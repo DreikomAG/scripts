@@ -9,10 +9,10 @@ Script by:      https://github.com/swissbuechi
 # Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Identity.DirectoryManagement, Microsoft.Graph.DeviceManagement.Enrolment, Microsoft.Graph.Identity.SignIns, Microsoft.Graph.Devices.CorporateManagement, ExchangeOnlineManagement, PnP.PowerShell
 [CmdletBinding()]
 Param(
-    [switch]$UseExistingExoSession,   
-    [switch]$KeepExoSessionAlive,    
+    [switch]$UseExistingExoSession,
+    [switch]$KeepExoSessionAlive,
     [switch]$UseExistingGraphSession,
-    [switch]$KeepGraphSessionAlive,  
+    [switch]$KeepGraphSessionAlive,
     [switch]$UseExistingSpoSession,
     [switch]$KeepSpoSessionAlive,
     [switch]$AddExchangeOnlineReport,
@@ -40,7 +40,7 @@ $script:SpoConnected = $false
 
 $script:InteractiveMode = $false
 $script:MailboxLanguageCode = "de-CH"
-$script:MailboxTimeZone = "W. Europe Standard Time" 
+$script:MailboxTimeZone = "W. Europe Standard Time"
 
 $script:CustomerName = ""
 
