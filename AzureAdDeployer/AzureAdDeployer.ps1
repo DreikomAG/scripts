@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.7.0"
+$Version = "2.7.1"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -549,10 +549,13 @@ function checkMailDomainReport {
     if (-not ($Domains)) { $Domains = Get-AcceptedDomain | Select-Object -Property Id, "Default", @{Name = "DKIM"; Expression = { $false } } }
     $DomainsReport = @()
     foreach ($Domain in $Domains) {
+        $ProcessedCount++
+        Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Domain.Id)"
         $Domain = checkDMARC -Domain $Domain
         $Domain = checkSPF -Domain $Domain
         $DomainsReport += $Domain
     }
+    Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Domain.Id)" -Status "Ready" -Completed
     $Report = $DomainsReport | ConvertTo-Html -As Table -Property Id, DKIM, DMARC, SPF, "DMARC record", "SPF record", "DMARC hint", "SPF hint", "Default" -Fragment -PreContent "<h3>Domains</h3>"
     $Report = $Report -Replace "<td>False</td><td>False</td><td>False</td>", "<td class='red'>False</td><td class='red'>False</td><td class='red'>False</td>"
     $Report = $Report -Replace "<td>False</td><td>False</td><td>True</td>", "<td class='red'>False</td><td class='red'>False</td><td>True</td>"
@@ -610,7 +613,7 @@ function checkDMARC {
 function checkSPF {
     param($Domain)
     if ($PSVersionTable.Platform -eq "Unix") { $SPFRecord = (Resolve-Dns -Query $Domain.Id -QueryType TXT | Select-Object -Expand Answers).Text | where-object { $_ -match "v=spf1" } }
-    else { $SPFRecord = Resolve-DnsName -Name $Name -Type TXT -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } | Select-Object -ExpandProperty strings }
+    else { $SPFRecord = Resolve-DnsName -Name $Domain.Id -Type TXT -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } | Select-Object -ExpandProperty strings }
     if ($SPFRecord -match "redirect") {
         $redirect = $SPFRecord.Split(" ")
         $RedirectName = $redirect -match "redirect" -replace "redirect="
