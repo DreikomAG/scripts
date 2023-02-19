@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.4.1"
+$Version = "2.5.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -534,12 +534,59 @@ function checkSpoTenantReport {
 <# Mail Domain section #>
 function checkMailDomainReport {
     Write-Host "Checking domains"
-    $Domains = Get-DkimSigningConfig | Select-Object -Property Id, IsDefault, @{Name = "DKIM"; Expression = { $_.Enabled } }
+    $Domains = Get-DkimSigningConfig | Select-Object -Property Id, @{Name = "Default"; Expression = { $_.IsDefault } }, @{Name = "DKIM"; Expression = { $_.Enabled } }
     if (-not ($Domains)) { $Domains = Get-AcceptedDomain | Select-Object -Property Id, "Default", @{Name = "DKIM"; Expression = { $false } } }
-    $Report = $Domains | ConvertTo-Html -As Table -Fragment -PreContent "<h3>Domains</h3>"
-    $Report = $Report -Replace "<td>False</td><td>False</td>", "<td>False</td><td class='red'>False</td>"
+    $DomainsReport = @()
+    foreach ($Domain in $Domains) {
+        $DomainsReport += checkDmarc -Domain $Domain
+    }
+    $Report = $DomainsReport | ConvertTo-Html -As Table -Property Id, DKIM, DMARC, "DMARC record", "DMARC hint", "Default" -Fragment -PreContent "<h3>Domains</h3>"
+    $Report = $Report -Replace "<td>False</td><td>False</td>", "<td class='red'>False</td><td class='red'>False</td>"
     $Report = $Report -Replace "<td>True</td><td>False</td>", "<td>True</td><td class='red'>False</td>"
+    $Report = $Report -Replace "<td>False</td><td>True</td>", "<td class='red'>False</td><td>True</td>"
+    $Report = $Report -Replace "<td>To fully take advantage, policy should be p=reject</td>", "<td class='orange'>To fully take advantage, policy should be p=reject</td>"
+    $Report = $Report -Replace "<td>Does not prevent abuse from phishers and spammers</td>", "<td class='red'>Does not prevent abuse from phishers and spammers</td>"
     return $Report
+}
+function checkDmarc {
+    param($Domain)
+    if ($PSVersionTable.Platform -eq "Unix") { $DMARCRecord = (Resolve-Dns -Query "_dmarc.$($Domain.Id)" -QueryType txt | Select-Object -Expand Answers).Text }
+    else { $DMARCRecord = Resolve-DnsName -Name "_dmarc.$($Domain.Id)" -Type TXT | Select-Object -ExpandProperty strings }
+    if ($null -eq $DMARCRecord ) {
+        $DMARC = $false
+    }
+    Else {
+        switch -Regex ($DMARCRecord ) {
+                ('p=none') {
+                $DmarcHint = "Does not prevent abuse from phishers and spammers"
+                $DMARC = $false
+            }
+                ('p=quarantine') {
+                $DmarcHint = "To fully take advantage, policy should be p=reject"
+                $DMARC = $true
+            }
+                ('p=reject') {
+                $DmarcHint = "Will prevent abuse from phishers and spammers"
+                $DMARC = $true
+            }
+                ('sp=none') {
+                $DmarcHint += "Does not prevent abuse from phishers and spammers"
+                $DMARC = $false
+            }
+                ('sp=quarantine') {
+                $DmarcHint += "To fully take advantage, policy should be p=reject"
+                $DMARC = $true
+            }
+                ('sp=reject') {
+                $DmarcHint += "Will prevent abuse from phishers and spammers"
+                $DMARC = $true
+            }
+        }
+    }
+    $Domain | Add-Member NoteProperty "DMARC" $DMARC
+    $Domain | Add-Member NoteProperty "DMARC record" "$($DMARCRecord )"
+    $Domain | Add-Member NoteProperty "DMARC hint" $DmarcHint
+    return $Domain
 }
 
 <# Mail connector section#>
