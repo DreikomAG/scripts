@@ -32,7 +32,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.11.0"
+$Version = "2.11.1"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -680,7 +680,7 @@ function checkGuestUserReport {
     Select-MgProfile -Name "beta"
     $Users = Get-MgUser -All -Filter "UserType eq 'Guest'" -Property Id, DisplayName, UserPrincipalName, AccountEnabled, SignInActivity
     Select-MgProfile -Name "v1.0"
-    return $Users | Select-Object -Property DisplayName, UserPrincipalName, AccountEnabled, @{Name = "LastSignIn"; Expression = { $_.SignInActivity.LastSignInDateTime } } | ConvertTo-HTML -As Table -Fragment -PreContent "<br><h3 id='AAD_GUEST'>Guest accounts</h3>"
+    return $Users | Select-Object -Property DisplayName, UserPrincipalName, AccountEnabled, @{Name = "LastSignIn"; Expression = { $_.SignInActivity.LastSignInDateTime } } | Sort-Object -Property LastSignIn | ConvertTo-HTML -As Table -Fragment -PreContent "<br><h3 id='AAD_GUEST'>Guest accounts</h3>"
 }
 
 <# Security Defaults section #>
