@@ -21,6 +21,10 @@ Param(
     [switch]$EnableSecurityDefaults,
     [switch]$DisableSecurityDefaults,
     [switch]$DisableEnterpiseApplicationUserConsent,
+    [switch]$DisableUsersToCreateAppRegistrations,
+    [switch]$DisableUsersToReadOtherUsers,
+    [switch]$DisableUsersToCreateSecurityGroups,
+    [switch]$EnableBlockMsolPowerShell,
     [switch]$SetMailboxLanguage,
     [switch]$DisableSharedMailboxLogin,
     [switch]$EnableSharedMailboxCopyToSent,
@@ -28,7 +32,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.8.1"
+$Version = "2.9.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -48,10 +52,16 @@ $script:CreateBreakGlassAccount = $CreateBreakGlassAccount
 $script:EnableSecurityDefaults = $EnableSecurityDefaults
 $script:DisableSecurityDefaults = $DisableSecurityDefaults
 $script:DisableEnterpiseApplicationUserConsent = $DisableEnterpiseApplicationUserConsent
+$script:DisableUsersToCreateAppRegistrations = $DisableUsersToCreateAppRegistrations
+$script:DisableUsersToReadOtherUsers = $DisableUsersToReadOtherUsers
+$script:DisableUsersToCreateSecurityGroups = $DisableUsersToCreateSecurityGroups
+$script:EnableBlockMsolPowerShell = $EnableBlockMsolPowerShell
+
 $script:SetMailboxLanguage = $SetMailboxLanguage
 $script:DisableSharedMailboxLogin = $DisableSharedMailboxLogin
 $script:EnableSharedMailboxCopyToSent = $EnableSharedMailboxCopyToSent
 $script:HideUnifiedMailboxFromOutlookClient = $HideUnifiedMailboxFromOutlookClient
+
 $script:DisableAddToOneDrive = $DisableAddToOneDrive
 
 $script:AddExchangeOnlineReport = $AddExchangeOnlineReport
@@ -70,65 +80,154 @@ function CheckInteractiveMode {
     $script:InteractiveMode = $true
 }
 function InteractiveMenu {
-    $StartOptionValue = 0
     $script:AddExchangeOnlineReport = $true
     $script:AddSharePointOnlineReport = $true
-    while ($result -ne $StartOptionValue) {
-        $Title = ""
-        $Message = ""
+    mainMenu
+}
+function mainMenu {
+    $StartOptionValue = 0
+    while (($result -ne $StartOptionValue) -or ($result -ne 1)) {
         $Status = @"
 
-Report options:
-E: Add Exchange Online report: $($script:AddExchangeOnlineReport)
-P: Add SharePoint Online report: $($script:AddSharePointOnlineReport)
+Main menu:
+S: Start
+C: Configure options
+1: Add SharePoint Online report: $($script:AddSharePointOnlineReport)
+2: Add Exchange Online report: $($script:AddExchangeOnlineReport)
+"@
+        $StartOption = New-Object System.Management.Automation.Host.ChoiceDescription "&START", "Start"
+        $ConfigureOption = New-Object System.Management.Automation.Host.ChoiceDescription "&CONFIGURE", "Add SharePoint Online report"
+        $AddSharePointOnlineReportOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1 SPO", "Add SharePoint Online report"
+        $AddExchangeOnlineReportOption = New-Object System.Management.Automation.Host.ChoiceDescription "&2 EXO", "Add Exchange Online report"
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $ConfigureOption, $AddSharePointOnlineReportOption, $AddExchangeOnlineReportOption )
+        Write-Host $Status
+        $result = $host.ui.PromptForChoice("", "", $Options, $StartOptionValue)
+        switch ($result) {
+            0 { return }
+            1 { configMenu }
+            2 { $script:AddSharePointOnlineReport = ! $script:AddSharePointOnlineReport }
+            3 { $script:AddExchangeOnlineReport = ! $script:AddExchangeOnlineReport }
+        }
+    }
+}
+function configMenu {
+    $StartOptionValue = 0
+    
+    $Status = @"
 
-Configuration options:
+Configure menu:
+1: Azure Active Directory
+2: SharePoint Online
+3: Exchange Online
+B: Back to main menu
+"@
+    $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
+    $AADOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1 AAD", "Azure Active Directory options"
+    $SPOOption = New-Object System.Management.Automation.Host.ChoiceDescription "&2 SPO", "SharePoint Online options"
+    $EXOOption = New-Object System.Management.Automation.Host.ChoiceDescription "&3 EXO", "Exchange Online options"
+    $Options = [System.Management.Automation.Host.ChoiceDescription[]]($BackOption, $AADOption, $SPOOption, $EXOOption)
+    Write-Host $Status
+    $result = $host.ui.PromptForChoice("", "", $Options, $StartOptionValue)
+    switch ($result) {
+        0 { return }
+        1 { AADMenu }
+        2 { SPOMenu }
+        3 { EXOMenu }
+    }
+}
+function AADMenu {
+    $StartOptionValue = 0
+    while ($result -ne $StartOptionValue) {
+        $Status = @"
+
+Azure Active Directory options:
 1: Create BreakGlass account: $($script:CreateBreakGlassAccount)
 2: Enable Security Defaults: $($script:EnableSecurityDefaults)
 3: Disable Security Defaults: $($script:DisableSecurityDefaults)
 4: Disable Enterprise Application user consent: $($script:DisableEnterpiseApplicationUserConsent)
-5: Set mailbox language: $($script:SetMailboxLanguage)
-6: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
-7: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
-8: Hide unified mailbox from outlook client: $($script:HideUnifiedMailboxFromOutlookClient)
-9: Disable add to OneDrive: $($script:DisableAddToOneDrive)
-
-S: Start
+5: Disable user to create app registrations: $($script:DisableUsersToCreateAppRegistrations)
+6: Disable user to read other users: $($script:DisableUsersToReadOtherUsers)
+7: Disable users to create security groups: $($script:DisableUsersToCreateSecurityGroups)
+8: Disable legacy MsolPowerShell access: $($script:EnableBlockMsolPowerShell)
+B: Back to main menu
 "@
-        $StartOption = New-Object System.Management.Automation.Host.ChoiceDescription "&START", "Start"
-        $AddExchangeOnlineReportOption = New-Object System.Management.Automation.Host.ChoiceDescription "&EXO", "Add Exchange Online report"
-        $AddSharePointOnlineReportOption = New-Object System.Management.Automation.Host.ChoiceDescription "S&PO", "Add SharePoint Online report"
-
+        $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
         $CreateBreakGlassAccountOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1", "Create BreakGlass account"
         $EnableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&2", "Enable Security Defaults"
         $DisableSecurityDefaultsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&3", "Disable Security Defaults"
         $DisableEnterpiseApplicationUserConsentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&4", "Disable Enterprise Application user consent"
-        $SetMailboxLanguageOption = New-Object System.Management.Automation.Host.ChoiceDescription "&5", "Set mailbox language"
-        $DisableSharedMailboxLoginOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Disable shared mailbox login"
-        $EnableSharedMailboxCopyToSentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Enable shared mailbox copy to sent"
-        $HideUnifiedMailboxFromOutlookClientOption = New-Object System.Management.Automation.Host.ChoiceDescription "&8", "Hide unified mailbox from outlook client"
-        $DisableAddToOneDriveOption = New-Object System.Management.Automation.Host.ChoiceDescription "&9", "Disable add to OneDrive"
+        $DisableUsersToCreateAppRegistrationsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&5", "Disable user to create app registrations"
+        $DisableUsersToReadOtherUsersOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Disable user to read other users"
+        $DisableUsersToCreateSecurityGroupsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Disable users to create security groups"
+        $EnableBlockMsolPowerShellOption = New-Object System.Management.Automation.Host.ChoiceDescription "&8", "Disable legacy MsolPowerShell access"
 
-        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($StartOption, $AddExchangeOnlineReportOption, $AddSharePointOnlineReportOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption, $HideUnifiedMailboxFromOutlookClientOption, $DisableAddToOneDriveOption)
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($BackOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $DisableUsersToCreateAppRegistrationsOption, $DisableUsersToReadOtherUsersOption, $DisableUsersToCreateSecurityGroupsOption, $EnableBlockMsolPowerShellOption)
         Write-Host $Status
-        $result = $host.ui.PromptForChoice($Title, $Message, $Options, $StartOptionValue)
+        $result = $host.ui.PromptForChoice("", "", $Options, $StartOptionValue)
         switch ($result) {
-            0 { "Starting AzureAdDeployer" }
-            1 { $script:AddExchangeOnlineReport = ! $script:AddExchangeOnlineReport }
-            2 { $script:AddSharePointOnlineReport = ! $script:AddSharePointOnlineReport }
-            3 { $script:CreateBreakGlassAccount = ! $script:CreateBreakGlassAccount }
-            4 { $script:EnableSecurityDefaults = ! $script:EnableSecurityDefaults }
-            5 { $script:DisableSecurityDefaults = ! $script:DisableSecurityDefaults }
-            6 { $script:DisableEnterpiseApplicationUserConsent = ! $script:DisableEnterpiseApplicationUserConsent }
-            7 { $script:SetMailboxLanguage = ! $script:SetMailboxLanguage }
-            8 { $script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin }
-            9 { $script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent }
-            10 { $script:HideUnifiedMailboxFromOutlookClient = ! $script:HideUnifiedMailboxFromOutlookClient }
-            11 { $script:DisableAddToOneDrive = ! $script:DisableAddToOneDrive }
+            0 { return }
+            1 { $script:CreateBreakGlassAccount = ! $script:CreateBreakGlassAccount }
+            2 { $script:EnableSecurityDefaults = ! $script:EnableSecurityDefaults }
+            3 { $script:DisableSecurityDefaults = ! $script:DisableSecurityDefaults }
+            4 { $script:DisableEnterpiseApplicationUserConsent = ! $script:DisableEnterpiseApplicationUserConsent }
+            5 { $script:DisableUsersToCreateAppRegistrations = ! $script:DisableUsersToCreateAppRegistrations }
+            6 { $script:DisableUsersToReadOtherUsers = ! $script:DisableUsersToReadOtherUsers }
+            7 { $script:DisableUsersToCreateSecurityGroups = ! $script:DisableUsersToCreateSecurityGroups }
+            8 { $script:EnableBlockMsolPowerShell = ! $script:EnableBlockMsolPowerShell }
         }
     }
 }
-   
+function SPOMenu {
+    $StartOptionValue = 0
+    while ($result -ne $StartOptionValue) {
+        $Status = @"
+
+SharePoint Online options:
+1: Disable add to OneDrive button: $($script:DisableAddToOneDrive)
+B: Back to main menu
+"@
+        $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
+        $DisableAddToOneDriveOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1}", "Disable add to OneDrive button"
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($BackOption, $DisableAddToOneDriveOption)
+        Write-Host $Status
+        $result = $host.ui.PromptForChoice("", "", $Options, $StartOptionValue)
+        switch ($result) {
+            0 { return }
+            1 { $script:DisableAddToOneDrive = ! $script:DisableAddToOneDrive }
+        }
+    }
+}
+function EXOMenu {
+    $StartOptionValue = 0
+    while ($result -ne $StartOptionValue) {
+        $Status = @"
+
+Exchange Online options:
+1: Set mailbox language: $($script:SetMailboxLanguage)
+2: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
+3: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
+4: Hide unified mailbox from outlook client: $($script:HideUnifiedMailboxFromOutlookClient)
+B: Back to main menu
+"@
+        $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
+        $SetMailboxLanguageOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1", "Set mailbox language"
+        $DisableSharedMailboxLoginOption = New-Object System.Management.Automation.Host.ChoiceDescription "&2", "Disable shared mailbox login"
+        $EnableSharedMailboxCopyToSentOption = New-Object System.Management.Automation.Host.ChoiceDescription "&3", "Enable shared mailbox copy to sent"
+        $HideUnifiedMailboxFromOutlookClientOption = New-Object System.Management.Automation.Host.ChoiceDescription "&4", "Hide unified mailbox from outlook client"
+
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($BackOption, $SetMailboxLanguageOption, $DisableSharedMailboxLoginOption, $EnableSharedMailboxCopyToSentOption, $HideUnifiedMailboxFromOutlookClientOption)
+        Write-Host $Status
+        $result = $host.ui.PromptForChoice("", "", $Options, $StartOptionValue)
+        switch ($result) {
+            0 { return }
+            1 { $script:SetMailboxLanguage = ! $script:SetMailboxLanguage }
+            2 { $script:DisableSharedMailboxLogin = ! $script:DisableSharedMailboxLogin }
+            3 { $script:EnableSharedMailboxCopyToSent = ! $script:EnableSharedMailboxCopyToSent }
+            4 { $script:HideUnifiedMailboxFromOutlookClient = ! $script:HideUnifiedMailboxFromOutlookClient }
+        }
+    }
+}
+
 <# Connect sessions section #>
 function connectGraph {
     if ($UseExistingGraphSession) { return }
@@ -207,9 +306,17 @@ function organizationReport {
 <# Tenant user settings policy section #>
 function checkTenanUserSettingsReport {
     param(
-        [System.Boolean]$DisableUserConsent
+        [System.Boolean]$DisableUserConsent,
+        [System.Boolean]$DisableUsersToCreateAppRegistrations,
+        [System.Boolean]$DisableUsersToReadOtherUsers,
+        [System.Boolean]$DisableUsersToCreateSecurityGroups,
+        [System.Boolean]$EnableBlockMsolPowerShell
     )
     if ($DisableUserConsent) { disableApplicationUserConsent }
+    if ($DisableUsersToCreateAppRegistrations) { disableUsersToCreateAppRegistrations }
+    if ($DisableUsersToReadOtherUsers) { disableUsersToReadOtherUsers }
+    if ($DisableUsersToCreateSecurityGroups) { disableUsersToCreateSecurityGroups }
+    if ($EnableBlockMsolPowerShell) { enableBlockMsolPowerShell }
     Write-Host "Checking tenant user settings"
     $Policy = Get-MgPolicyAuthorizationPolicy -Property BlockMsolPowerShell, DefaultUserRolePermissions
     $Report = $Policy | Select-Object -Property  @{Name = "PermissionGrantPoliciesAssigned"; Expression = { [string]$_.DefaultUserRolePermissions.PermissionGrantPoliciesAssigned } },
@@ -226,9 +333,23 @@ function checkTenanUserSettingsReport {
 }
 function disableApplicationUserConsent {
     Write-Host "Disable Enterprise Application user consent"
-    Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{
-        "PermissionGrantPoliciesAssigned" = @() 
-    }
+    Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ "PermissionGrantPoliciesAssigned" = @() }
+}
+function disableUsersToCreateAppRegistrations {
+    Write-Host "Disable user to create app registrations"
+    Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ "AllowedToCreateApps" = $false }
+}
+function disableUsersToReadOtherUsers {
+    Write-Host "Disable user to read other users"
+    Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ "AllowedToReadOtherUsers" = $false }
+}
+function disableUsersToCreateSecurityGroups {
+    Write-Host "Disable users to create security groups"
+    Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ "AllowedToCreateSecurityGroups" = $false }
+}
+function enableBlockMsolPowerShell {
+    Write-Host "Disable legacy MsolPowerShell access"
+    Update-MgPolicyAuthorizationPolicy -BlockMsolPowerShell
 }
 
 <# User Account section #>
@@ -831,7 +952,7 @@ $Report = @()
 $Report += organizationReport
 $Report += $Toc
 $Report += "<br><hr><h2 id='AAD'>Azure Active Directory</h2>"
-$Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent
+$Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent -DisableUsersToCreateAppRegistrations $script:DisableUsersToCreateAppRegistrations -DisableUsersToReadOtherUsers $script:DisableUsersToReadOtherUsers -DisableUsersToCreateSecurityGroups $script:DisableUsersToCreateSecurityGroups -EnableBlockMsolPowerShell $script:EnableBlockMsolPowerShell
 $Report += checkAdminRoleReport
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
 $Report += checkUserMfaStatusReport

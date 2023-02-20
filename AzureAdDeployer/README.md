@@ -11,10 +11,10 @@
 
 - Tenant user settings
   - Enterprise Application user consent: show, disable
-  - Allowed to create apps: show
-  - Allowed  to create secutity groups: show
-  - Allowed to read other users: show
-  - BlockMsolPowerShell: show
+  - Allowed to create apps: show, disable
+  - Allowed  to create secutity groups: show, disable
+  - Allowed to read other users: show, disable
+  - BlockMsolPowerShell: show, enable
 - Admin role assignments: show
 - User mfa status: show
 - BreakGlass account: show, create
@@ -102,6 +102,10 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 | `-EnableSecurityDefaults`                 | Enable Security defaults                       |
 | `-DisableSecurityDefaults`                | Disable Security defaults                      |
 | `-DisableEnterpiseApplicationUserConsent` | Disable Enterprise Application user consent    |
+| `-DisableUsersToCreateAppRegistrations`   | Disable user to create app registrations       |
+| `-DisableUsersToReadOtherUsers`           | Disable user to read other users               |
+| `-DisableUsersToCreateSecurityGroups`     | Disable users to create security groups        |
+| `-EnableBlockMsolPowerShell`              | Disable legacy MsolPowerShell access           |
 
 ### SharePoint Online
 
