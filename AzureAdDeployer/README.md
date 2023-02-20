@@ -75,10 +75,10 @@ Uninstall-Module -Name ExchangeOnlineManagement
 Windows PowerShell 5.1 (not Core!) as administrator:
 
 ```PowerShell
-Install-Module -Name Microsoft.Graph -Scope AllUsers -Force
-Install-Module -Name PnP.PowerShell -Scope AllUsers -Force
-Install-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
-Install-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux required
+Install-Module -Name Microsoft.Graph -Scope AllUsers
+Install-Module -Name PnP.PowerShell -Scope AllUsers
+Install-Module -Name ExchangeOnlineManagement -Scope AllUsers
+Install-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 ```
 
 ### Updating
@@ -86,10 +86,10 @@ Install-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux 
 Windows PowerShell 5.1 (not Core!) as administrator:
 
 ```PowerShell
-Update-Module -Name Microsoft.Graph -Scope AllUsers -Force
-Update-Module -Name PnP.PowerShell -Scope AllUsers -Force
-Update-Module -Name ExchangeOnlineManagement -Scope AllUsers -Force
-Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux required
+Update-Module -Name Microsoft.Graph -Scope AllUsers
+Update-Module -Name PnP.PowerShell -Scope AllUsers
+Update-Module -Name ExchangeOnlineManagement -Scope AllUsers
+Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 ```
 
 ## Arguments
