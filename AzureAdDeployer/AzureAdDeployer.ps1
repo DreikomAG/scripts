@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.8.0"
+$Version = "2.8.1"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -969,7 +969,7 @@ $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 $ReportName = ("Microsoft365-Report-$($script:CustomerName).html").Replace(" ", "")
 $PostContentHtml = @"
 <p id='FootNote'>$($VersionMessage)</p>
-<p id='FootNote'>Creation date: $(Get-Date)</p>
+<p id='FootNote'>Creation date: $(Get-Date -Format "dd.MM.yyyy HH:mm")</p>
 <img src="$($LogoImageUrl)" width='75'>
 "@
 Write-Host "Generating HTML report:" $ReportName
