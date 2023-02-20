@@ -28,7 +28,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.7.1"
+$Version = "2.8.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -204,6 +204,33 @@ function organizationReport {
     return  "<h2>$($Organization.DisplayName) ($($Organization.Id))</h2>"
 }
 
+<# Tenant user settings policy section #>
+function checkTenanUserSettingsReport {
+    param(
+        [System.Boolean]$DisableUserConsent
+    )
+    if ($DisableUserConsent) { disableApplicationUserConsent }
+    Write-Host "Checking tenant user settings"
+    $Policy = Get-MgPolicyAuthorizationPolicy -Property BlockMsolPowerShell, DefaultUserRolePermissions
+    $Report = $Policy | Select-Object -Property  @{Name = "PermissionGrantPoliciesAssigned"; Expression = { [string]$_.DefaultUserRolePermissions.PermissionGrantPoliciesAssigned } },
+    @{Name = "AllowedToCreateApps"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToCreateApps } },
+    @{Name = "AllowedToCreateSecurityGroups"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToCreateSecurityGroups } },
+    @{Name = "AllowedToReadOtherUsers"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToReadOtherUsers } }, BlockMsolPowerShell | ConvertTo-Html -As List -Fragment -PreContent "<h3 id='AAD_USER_SETTINGS'>Tenant user settings</h3>" -PostContent "<p>PermissionGrantPoliciesAssigned: empty (user consent not allowed), microsoft-user-default-legacy (user consent allowed for all apps), microsoft-user-default-low (user consent allowed for low permission apps)</p>"
+    $Report = $Report -Replace "<td>PermissionGrantPoliciesAssigned:</td><td>ManagePermissionGrantsForSelf.microsoft-user-default-legacy</td>", "<td>PermissionGrantPoliciesAssigned:</td><td class='red'>microsoft-user-default-legacy</td>"
+    $Report = $Report -Replace "<td>PermissionGrantPoliciesAssigned:</td><td>ManagePermissionGrantsForSelf.microsoft-user-default-low</td>", "<td>PermissionGrantPoliciesAssigned:</td><td class='orange'>microsoft-user-default-low</td>"
+    $Report = $Report -Replace "<td>AllowedToCreateApps:</td><td>True</td>", "<td>AllowedToCreateApps:</td><td class='red'>True</td>"
+    $Report = $Report -Replace "<td>AllowedToCreateSecurityGroups:</td><td>True</td>", "<td>AllowedToCreateSecurityGroups:</td><td class='red'>True</td>"
+    $Report = $Report -Replace "<td>AllowedToReadOtherUsers:</td><td>True</td>", "<td>AllowedToReadOtherUsers:</td><td class='red'>True</td>"
+    $Report = $Report -Replace "<td>BlockMsolPowerShell:</td><td>False</td>", "<td>BlockMsolPowerShell:</td><td class='red'>False</td>"
+    return $Report
+}
+function disableApplicationUserConsent {
+    Write-Host "Disable Enterprise Application user consent"
+    Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{
+        "PermissionGrantPoliciesAssigned" = @() 
+    }
+}
+
 <# User Account section #>
 function disableUserAccount {
     param (
@@ -238,7 +265,7 @@ function checkAdminRoleReport {
         }
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Assignment.PrincipalId)" -Status "Ready" -Completed
-    return $Assignments | Where-Object { -not ($null -eq $_.DisplayName) } | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, RoleName -As Table -Fragment -PreContent "<h3>Admin role assignments</h3>"
+    return $Assignments | Where-Object { -not ($null -eq $_.DisplayName) } | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, RoleName -As Table -Fragment -PreContent "<br><h3 id='AAD_ADMINS'>Admin role assignments</h3>"
 }
 
 <# BreakGlass account Section #>
@@ -247,18 +274,18 @@ function checkBreakGlassAccountReport {
         $Create
     )
     if ($BgAccount = getBreakGlassAccount) {
-        $Report = $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3>"
+        $Report = $BgAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3 id='AAD_BG'>BreakGlass account</h3>"
         $Report = $Report -Replace "<td>False</td>", "<td class='red'>False</td>"
         return $Report
 
     }
     if ($create) {
         createBreakGlassAccount
-        $Report = getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3>BreakGlass account</h3>" -PostContent "<p>Check console log for credentials</p>"
+        $Report = getBreakGlassAccount | ConvertTo-HTML -Property DisplayName, UserPrincipalName, AccountEnabled, GlobalAdmin, LastSignIn -As Table -Fragment -PreContent "<br><h3 id='AAD_BG'>BreakGlass account</h3>" -PostContent "<p>Check console log for credentials</p>"
         $Report = $Report -Replace "<td>False</td>", "<td class='red'>False</td>"
         return $Report
     }
-    return "<br><h3>BreakGlass account</h3><p>Not found</p>"
+    return "<br><h3 id='AAD_BG'>BreakGlass account</h3><p>Not found</p>"
 }
 function getBreakGlassAccount {
     Write-Host "Checking BreakGlass account"
@@ -423,7 +450,7 @@ function checkUserMfaStatusReport {
         Add-Member -InputObject $_ -NotePropertyName "AdditionalDetail" -NotePropertyValue $AdditionalDetail
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($_.DisplayName)" -Status "Ready" -Completed
-    $Report = $Users | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, LicenseStatus, AccountEnabled, MFAStatus, AdditionalDetail -As Table -Fragment -PreContent "<br><h3>User MFA status</h3>" -PostContent "<p>Weak: PhoneAuthentication, EmailAuthentication</p><p>Strong: Fido2, PasswordlessMSAuthenticator, AuthenticatorApp, WindowsHelloForBusiness, SoftwareOath</p>"
+    $Report = $Users | Sort-Object -Property UserPrincipalName | ConvertTo-HTML -Property DisplayName, UserPrincipalName, LicenseStatus, AccountEnabled, MFAStatus, AdditionalDetail -As Table -Fragment -PreContent "<br><h3 id='AAD_MFA'>User MFA status</h3>" -PostContent "<p>Weak: PhoneAuthentication, EmailAuthentication</p><p>Strong: Fido2, PasswordlessMSAuthenticator, AuthenticatorApp, WindowsHelloForBusiness, SoftwareOath</p>"
     $Report = $Report -Replace "<td>True</td><td>Disabled</td>", "<td>True</td><td class='red'>Disabled</td>"
     $Report = $Report -Replace "<td>True</td><td>Weak</td>", "<td>True</td><td class='orange'>Weak</td>"
     return $Report
@@ -442,9 +469,9 @@ function checkSecurityDefaultsReport {
         updateSecurityDefaults -Enable $false
     }
     if (checkSecurityDefaults) {
-        return "<br><h3>Security Defaults</h3><p>Enabled</p>"
+        return "<br><h3 id='AAD_SEC_DEFAULTS'>Security Defaults</h3><p>Enabled</p>"
     }
-    return "<br><h3>Security Defaults</h3><p>Disabled</p>"
+    return "<br><h3 id='AAD_SEC_DEFAULTS'>Security Defaults</h3><p>Disabled</p>"
 }
 function checkSecurityDefaults {
     Write-Host "Checking Security Defaults"
@@ -463,9 +490,9 @@ function updateSecurityDefaults {
 function checkConditionalAccessPolicyReport {
     Write-Host "Checking Conditional Access policies"
     if ($Policy = Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName, State) {
-        return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3>Conditional Access policies</h3>"
+        return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3 id='AAD_CA'>Conditional Access policies</h3>"
     }
-    return "<br><h3>Conditional Access policies</h3><p>Not found</p>"
+    return "<br><h3 id='AAD_CA'>Conditional Access policies</h3><p>Not found</p>"
 }
 function checkNamedLocationReport {
     Write-Host "Checking named locations"
@@ -477,18 +504,18 @@ function checkNamedLocationReport {
                 }
                 return $IpRangesReport
             }
-        }, @{Name = "Countries"; Expression = { $_.additionalProperties["countriesAndRegions"] } } | ConvertTo-HTML -As Table -Fragment -PreContent "<br><h3>Named locations</h3>"
+        }, @{Name = "Countries"; Expression = { $_.additionalProperties["countriesAndRegions"] } } | ConvertTo-HTML -As Table -Fragment -PreContent "<br><h3 id='AAD_CA_LOCATIONS'>Named locations</h3>"
     }
-    return "<br><h3>Named locations</h3><p>Not found</p>"
+    return "<br><h3 id='AAD_CA_LOCATIONS'>Named locations</h3><p>Not found</p>"
 }
 
 <# Application protection polices section#>
 function checkAppProtectionPolicesReport {
     Write-Host "Checking App protection policies"
     if ($Polices = getAppProtectionPolices) {
-        return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3>App protection policies</h3>"
+        return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3 id='AAD_APP_POLICY'>App protection policies</h3>"
     }
-    return "<br><h3>App protection policies</h3><p>Not found</p>"
+    return "<br><h3 id='AAD_APP_POLICY'>App protection policies</h3><p>Not found</p>"
 }
 function getAppProtectionPolices {
     $IOSPolicies = Get-MgDeviceAppManagementiOSManagedAppProtection -Property DisplayName, IsAssigned
@@ -497,27 +524,6 @@ function getAppProtectionPolices {
     $Policies += $IOSPolicies
     $Policies += $AndroidPolicies
     return $Policies
-}
-
-<# Enterprise Application section #>
-function checkApplicationConsentPolicyReport {
-    param(
-        [System.Boolean]$DisableUserConsent
-    )
-    if ($DisableUserConsent) { disableApplicationUserConsent }
-    Write-Host "Checking Enterprise Application consent policy"
-    $Policy = (Get-MgPolicyAuthorizationPolicy -Property DefaultUserRolePermissions).DefaultUserRolePermissions
-    Add-Member -InputObject $Policy -NotePropertyName "PermissionGrantPoliciesAssigned" -NotePropertyValue ([string]$Policy.PermissionGrantPoliciesAssigned) -Force
-    $Report = $Policy | ConvertTo-Html -As List -Property PermissionGrantPoliciesAssigned -Fragment -PreContent "<br><h3>Enterprise Application user consent policy</h3>" -PostContent "<p>PermissionGrantPoliciesAssigned: empty (user consent not allowed), microsoft-user-default-legacy (user consent allowed for all apps), microsoft-user-default-low (user consent allowed for low permission apps)</p>"
-    $Report = $Report -Replace "<td>PermissionGrantPoliciesAssigned:</td><td>ManagePermissionGrantsForSelf.microsoft-user-default-legacy</td>", "<td>PermissionGrantPoliciesAssigned:</td><td class='red'>ManagePermissionGrantsForSelf.microsoft-user-default-legacy</td>"
-    $Report = $Report -Replace "<td>PermissionGrantPoliciesAssigned:</td><td>ManagePermissionGrantsForSelf.microsoft-user-default-low</td>", "<td>PermissionGrantPoliciesAssigned:</td><td class='orange'>ManagePermissionGrantsForSelf.microsoft-user-default-low</td>"
-    return $Report
-}
-function disableApplicationUserConsent {
-    Write-Host "Disable Enterprise Application user consent"
-    Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{
-        "PermissionGrantPoliciesAssigned" = @() 
-    }
 }
 
 <# SharePoint Tenant section #>
@@ -530,7 +536,7 @@ function checkSpoTenantReport {
         Write-Host "Disable add to OneDrive button"
         Set-PnPTenant -DisableAddToOneDrive $True
     }
-    $Report = Get-PnPTenant | ConvertTo-HTML -As List -Property LegacyAuthProtocolsEnabled, DisableAddToOneDrive, ConditionalAccessPolicy, SharingCapability, ODBMembersCanShare, PreventExternalUsersFromResharing, DefaultSharingLinkType, DefaultLinkPermission, FolderAnonymousLinkType, FileAnonymousLinkType, RequireAnonymousLinksExpireInDays -Fragment -PreContent "<h3>Tenant settings</h3>" -PostContent "<p>ConditionalAccessPolicy: AllowFullAccess, AllowLimitedAccess, BlockAccess</p>
+    $Report = Get-PnPTenant | ConvertTo-HTML -As List -Property LegacyAuthProtocolsEnabled, DisableAddToOneDrive, ConditionalAccessPolicy, SharingCapability, ODBMembersCanShare, PreventExternalUsersFromResharing, DefaultSharingLinkType, DefaultLinkPermission, FolderAnonymousLinkType, FileAnonymousLinkType, RequireAnonymousLinksExpireInDays -Fragment -PreContent "<h3 id='SPO_SETTINGS'>Tenant settings</h3>" -PostContent "<p>ConditionalAccessPolicy: AllowFullAccess, AllowLimitedAccess, BlockAccess</p>
     <p>SharingCapability: Disabled, ExternalUserSharingOnly, ExternalUserAndGuestSharing, ExistingExternalUserSharingOnly</p>
     <p>DefaultSharingLinkType: None, Direct, Internal, AnonymousAccess</p>"
     $Report = $Report -Replace "<td>LegacyAuthProtocolsEnabled:</td><td>True</td>", "<td>LegacyAuthProtocolsEnabled:</td><td class='red'>True</td>"
@@ -556,7 +562,7 @@ function checkMailDomainReport {
         $DomainsReport += $Domain
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Domain.Id)" -Status "Ready" -Completed
-    $Report = $DomainsReport | ConvertTo-Html -As Table -Property Id, DKIM, DMARC, SPF, "DMARC record", "SPF record", "DMARC hint", "SPF hint", "Default" -Fragment -PreContent "<h3>Domains</h3>"
+    $Report = $DomainsReport | ConvertTo-Html -As Table -Property Id, DKIM, DMARC, SPF, "DMARC record", "SPF record", "DMARC hint", "SPF hint", "Default" -Fragment -PreContent "<h3 id='EXO_DOMAIN'>Domains</h3>"
     $Report = $Report -Replace "<td>False</td><td>False</td><td>False</td>", "<td class='red'>False</td><td class='red'>False</td><td class='red'>False</td>"
     $Report = $Report -Replace "<td>False</td><td>False</td><td>True</td>", "<td class='red'>False</td><td class='red'>False</td><td>True</td>"
     $Report = $Report -Replace "<td>True</td><td>False</td><td>False</td>", "<td>True</td><td class='red'>False</td><td class='red'>False</td>"
@@ -660,10 +666,10 @@ function checkSPF {
 <# Mail connector section#>
 function checkMailConnectorReport {
     Write-Host "Checking mail connectors"
-    if (-not ($Inbound = Get-InboundConnector)) { $InboundReport = "<br><h3>Inbound mail connector</h3><p>Not found</p>" }
-    else { $InboundReport = $Inbound | ConvertTo-Html -As Table -Property Name, SenderDomains, SenderIPAddresses, Enabled -Fragment -PreContent "<br><h3>Inbound mail connector</h3>" }
-    if (-not ($Outbound = Get-OutboundConnector -IncludeTestModeConnectors:$true)) { $OutboundReport = "<br><h3>Outbound mail connector</h3><p>Not found</p>" }
-    else { $OutboundReport = $Outbound | ConvertTo-Html -As Table -Property Name, RecipientDomains, SmartHosts, Enabled -Fragment -PreContent "<br><h3>Outbound mail connector</h3>" }
+    if (-not ($Inbound = Get-InboundConnector)) { $InboundReport = "<br><h3 id='EXO_CONNECTOR_IN'>Inbound mail connector</h3><p>Not found</p>" }
+    else { $InboundReport = $Inbound | ConvertTo-Html -As Table -Property Name, SenderDomains, SenderIPAddresses, Enabled -Fragment -PreContent "<br><h3 id='EXO_CONNECTOR_IN'>Inbound mail connector</h3>" }
+    if (-not ($Outbound = Get-OutboundConnector -IncludeTestModeConnectors:$true)) { $OutboundReport = "<br><h3 id='EXO_CONNECTOR_OUT'>Outbound mail connector</h3><p>Not found</p>" }
+    else { $OutboundReport = $Outbound | ConvertTo-Html -As Table -Property Name, RecipientDomains, SmartHosts, Enabled -Fragment -PreContent "<br><h3 id='EXO_CONNECTOR_OUT'>Outbound mail connector</h3>" }
     $Report = @()
     $Report += $InboundReport
     $Report += $OutboundReport
@@ -677,7 +683,7 @@ function checkMailboxReport {
     )
     Write-Host "Checking user mailboxes"
     if ( -not ($Mailboxes = Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize:Unlimited -Properties DisplayName, UserPrincipalName)) {
-        return "<br><h3>user mailbox</h3><p>Not found</p>"
+        return "<br><h3 id='EXO_USER'>User mailbox</h3><p>Not found</p>"
     }
     if ($Language) {
         setMailboxLang -Mailbox $Mailboxes
@@ -690,7 +696,7 @@ function checkMailboxReport {
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)" -Status "Ready" -Completed
     return $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, LoginAllowed `
-        -Fragment -PreContent "<br><h3>User mailbox</h3>"
+        -Fragment -PreContent "<br><h3 id='EXO_USER'>User mailbox</h3>"
 }
 function setMailboxLang {
     param(
@@ -710,7 +716,7 @@ function checkSharedMailboxReport {
     Write-Host "Checking shared mailboxes"
     if ( -not ($Mailboxes = Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize:Unlimited -Properties DisplayName,
             UserPrincipalName, MessageCopyForSentAsEnabled, MessageCopyForSendOnBehalfEnabled)) {
-        return "<br><h3>Shared mailbox</h3><p>Not found</p>"
+        return "<br><h3 id='EXO_SHARED'>Shared mailbox</h3><p>Not found</p>"
     }
     if ($Language) { setMailboxLang -Mailbox $Mailboxes }
     if ($DisableLogin) { disableUserAccount $Mailboxes }
@@ -727,7 +733,7 @@ function checkSharedMailboxReport {
     }
     Write-Progress -Activity "Processed count: $ProcessedCount; Currently processing: $($Mailbox.DisplayName)" -Status "Ready" -Completed
     $Report = $MailboxReport | ConvertTo-HTML -As Table -Property UserPrincipalName, DisplayName, Language, TimeZone, MessageCopyForSentAsEnabled,
-    MessageCopyForSendOnBehalfEnabled, LoginAllowed -Fragment -PreContent "<br><h3>Shared mailbox</h3>"
+    MessageCopyForSendOnBehalfEnabled, LoginAllowed -Fragment -PreContent "<br><h3 id='EXO_SHARED'>Shared mailbox</h3>"
     $Report = $Report -Replace "<td>True</td><td>True</td><td>True</td>", "<td>True</td><td>True</td><td class='red'>True</td>"
     $Report = $Report -Replace "<td>False</td><td>False</td><td>True</td>", "<td>False</td><td>False</td><td class='red'>True</td>"
     $Report = $Report -Replace "<td>True</td><td>False</td><td>True</td>", "<td>True</td><td>False</td><td class='red'>True</td>"
@@ -759,15 +765,51 @@ function checkUnifiedMailboxReport {
     )
     Write-Host "Checking unified mailboxes"
     if ( -not ($Mailboxes = Get-UnifiedGroup -ResultSize Unlimited)) {
-        return "<br><h3>Unified mailbox</h3><p>Not found</p>"
+        return "<br><h3 id='EXO_UNIFIED'>Unified mailbox</h3><p>Not found</p>"
     }
     if ($HideFromClient) {
         Write-Host "Hiding unified mailboxes from outlook client"
         $Mailboxes | Set-UnifiedGroup -HiddenFromExchangeClientsEnabled:$true -HiddenFromAddressListsEnabled:$false
         $Mailboxes = Get-UnifiedGroup -ResultSize Unlimited 
     }
-    return $Mailboxes | Sort-Object -Property PrimarySmtpAddress | ConvertTo-HTML -As Table -Property DisplayName, PrimarySmtpAddress, HiddenFromAddressListsEnabled, HiddenFromExchangeClientsEnabled -Fragment -PreContent "<br><h3>Unified mailbox</h3>"
+    return $Mailboxes | Sort-Object -Property PrimarySmtpAddress | ConvertTo-HTML -As Table -Property DisplayName, PrimarySmtpAddress, HiddenFromAddressListsEnabled, HiddenFromExchangeClientsEnabled -Fragment -PreContent "<br><h3 id='EXO_UNIFIED'>Unified mailbox</h3>"
 }
+
+<# HTML table of content section #>
+$Toc = @()
+$GlobalToc = "<br><hr><h2>Contents</h2>"
+$AADToc = @"
+<h3 class='TOC'><a href="#AAD">Azure Active Directory</a></h3>
+<ul>
+    <li><a href="#AAD_USER_SETTINGS">Tenant user settings</a></li>
+    <li><a href="#AAD_ADMINS">Admin role assignments</a></li>
+    <li><a href="#AAD_BG">BreakGlass account</a></li>
+    <li><a href="#AAD_MFA">User MFA status</a></li>
+    <li><a href="#AAD_SEC_DEFAULTS">Security Defaults</a></li>
+    <li><a href="#AAD_CA">Conditional Access policies</a></li>
+    <li><a href="#AAD_CA_LOCATIONS">Named locations</a></li>
+    <li><a href="#AAD_APP_POLICY">App protection policies</a></li>
+</ul>
+"@
+$SPOToc = @"
+<h3 class='TOC'><a href="#SPO">SharePoint Online</a></h3>
+<ul>
+    <li><a href="#SPO_SETTINGS">Tenant settings</a></li>
+</ul>
+"@
+$EXOToc = @"
+<h3 class='TOC'><a href="#EXO">Exchange Online</a></h3>
+<ul>
+    <li><a href="#EXO_DOMAIN">Domains</a></li>
+    <li><a href="#EXO_CONNECTOR_IN">Inbound mail connector</a></li>
+    <li><a href="#EXO_CONNECTOR_OUT">Outbound mail connector</a></li>
+    <li><a href="#EXO_USER">User mailbox</a></li>
+    <li><a href="#EXO_SHARED">Shared mailbox</a></li>
+    <li><a href="#EXO_UNIFIED">Unified mailbox</a></li>
+</ul>
+"@
+$Toc += $GlobalToc
+$Toc += $AADToc
 
 <# Script logic start section #>
 CheckInteractiveMode -Parameters $PSBoundParameters
@@ -776,12 +818,20 @@ if ($script:InteractiveMode) {
 }
 
 connectGraph
-if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) { connectSpo }
-if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) { connectExo }
+if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) { 
+    connectSpo
+    $Toc += $SPOToc
+}
+if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) {
+    connectExo
+    $Toc += $EXOToc
+}
 
 $Report = @()
 $Report += organizationReport
-$Report += "<br><hr><h2>Azure Active Directory</h2>"
+$Report += $Toc
+$Report += "<br><hr><h2 id='AAD'>Azure Active Directory</h2>"
+$Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent
 $Report += checkAdminRoleReport
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
 $Report += checkUserMfaStatusReport
@@ -789,14 +839,13 @@ $Report += checkSecurityDefaultsReport -Enable $script:EnableSecurityDefaults -D
 $Report += checkConditionalAccessPolicyReport
 $Report += checkNamedLocationReport
 $Report += checkAppProtectionPolicesReport
-$Report += checkApplicationConsentPolicyReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent
 
 if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) {
-    $Report += "<br><hr><h2>SharePoint Online</h2>"
+    $Report += "<br><hr><h2 id='SPO'>SharePoint Online</h2>"
     $Report += checkSpoTenantReport -DisableAddToOneDrive $script:DisableAddToOneDrive
 }
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) {
-    $Report += "<br><hr><h2>Exchange Online</h2>"
+    $Report += "<br><hr><h2 id='EXO'>Exchange Online</h2>"
     $Report += checkMailDomainReport
     $Report += checkMailConnectorReport
     $Report += checkMailboxReport -Language $script:SetMailboxLanguage
@@ -848,6 +897,19 @@ p {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
 }
+a {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 16px;
+    text-decoration: none;
+    color: #666666;
+}
+ul {
+    list-style-type: none;
+    margin-top: 5px;
+}
+li {
+    padding: 5px;
+}
 table {
     font-size: 14px;
     border: 0px;
@@ -889,6 +951,9 @@ tbody tr:nth-of-type(even) {
 }
 .orange {
     color: orange;
+}
+.TOC {
+    margin: 5px;
 }
 #FootNote {
 font-family: Arial, Helvetica, sans-serif;

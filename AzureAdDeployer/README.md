@@ -5,41 +5,39 @@
 ### General
 
 - Generates a HTML report to your Desktop called `Microsoft365-Report-<customer_name>.html`
-
 - Interactive console GUI
 
 ### Azure Active Directory
 
+- Tenant user settings
+  - Enterprise Application user consent: show, disable
+  - Allowed to create apps: show
+  - Allowed  to create secutity groups: show
+  - Allowed to read other users: show
+  - BlockMsolPowerShell: show
 - Admin role assignments: show
-
 - User mfa status: show
-
 - BreakGlass account: show, create
-
 - Security Defaults: show, enable, disable
-
-- Conditional Access policies: show
-
+- Conditional Access policies: show, list locations
 - App protection policies: show
-
-- Enterprise Application user consent: show, disable
 
 ### SharePoint Online
 
-- Add to OneDrive: show, disable
-
-- ConditionalAccessPolicy: show, list locations
+- Tenant settings:
+  - Legacy authentication protocols enabled: show
+  - Add to OneDrive button: show, disable
+  - Conditional Access policy: show
+  - Sharing capability: show
+  - Prevent external users from resharing: show
+  - Default sharing link type: show
 
 ### Exchange Online
 
 - Domains: show, check DKIM/DMARC/SPF
-
 - Mail connector: show
-
 - User mailbox: show, set language
-
 - Shared mailbox: show, set language, disable login, enable copy to sent
-
 - Unified mailbox: show, hide from client
 
 ## Infos
@@ -58,7 +56,7 @@ Remove-Item $Documents\PowerShell\Modules\ -Recurse -Force
 Remove-Item $Documents\WindowsPowerShell\Modules\ -Recurse -Force
 ```
 
-Windows PowerShell 5.1 (not Core!) as Administrator:
+Windows PowerShell 5.1 (not Core!) as administrator:
 
 ```PowerShell
 Uninstall-Module -Name Microsoft365DSC
@@ -74,7 +72,7 @@ Uninstall-Module -Name ExchangeOnlineManagement
 
 ### Installation
 
-Windows PowerShell 5.1 (not Core!) as Administrator:
+Windows PowerShell 5.1 (not Core!) as administrator:
 
 ```PowerShell
 Install-Module -Name Microsoft.Graph -Scope AllUsers -Force
@@ -85,7 +83,7 @@ Install-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux 
 
 ### Updating
 
-Windows PowerShell 5.1 (not Core!) as Administrator:
+Windows PowerShell 5.1 (not Core!) as administrator:
 
 ```PowerShell
 Update-Module -Name Microsoft.Graph -Scope AllUsers -Force
@@ -98,39 +96,39 @@ Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux r
 
 ### Azure Active directory
 
-| Argument | Description |
-| --- | --- |
-| `-CreateBreakGlassAccount` | Create a BreakGlass Account if no one is found |
-| `-EnableSecurityDefaults` | Enable Security defaults |
-| `-DisableSecurityDefaults` | Disable Security defaults |
-| `-DisableEnterpiseApplicationUserConsent` | Disable Enterprise Application user consent |
+| Argument                                  | Description                                    |
+| ----------------------------------------- | ---------------------------------------------- |
+| `-CreateBreakGlassAccount`                | Create a BreakGlass Account if no one is found |
+| `-EnableSecurityDefaults`                 | Enable Security defaults                       |
+| `-DisableSecurityDefaults`                | Disable Security defaults                      |
+| `-DisableEnterpiseApplicationUserConsent` | Disable Enterprise Application user consent    |
 
 ### SharePoint Online
 
-| Argument | Description |
-| --- | --- |
+| Argument                | Description             |
+| ----------------------- | ----------------------- |
 | `-DisableAddToOneDrive` | Disable add to OneDrive |
 
 ### Exchange Online
 
-| Argument | Description |
-| --- | --- |
-| `-AddExchangeOnlineReport` | Add a report section for Exchange Online |
-| `-SetMailboxLanguage` | Set mailbox language and location |
-| `-DisableSharedMailboxLogin` | Disable direct login to shared mailbox |
-| `-EnableSharedMailboxCopyToSent` | Enable shared mailbox copy to sent e-mails |
-| `-HideUnifiedMailboxFromOutlookClient` | Hide unified mailbox from outlook client |
+| Argument                               | Description                                |
+| -------------------------------------- | ------------------------------------------ |
+| `-AddExchangeOnlineReport`             | Add a report section for Exchange Online   |
+| `-SetMailboxLanguage`                  | Set mailbox language and location          |
+| `-DisableSharedMailboxLogin`           | Disable direct login to shared mailbox     |
+| `-EnableSharedMailboxCopyToSent`       | Enable shared mailbox copy to sent e-mails |
+| `-HideUnifiedMailboxFromOutlookClient` | Hide unified mailbox from outlook client   |
 
 ### Advanced
 
-| Argument | Description |
-| --- | --- |
-| `-UseExistingGraphSession` | Do not create a new Graph SDK PowerShell session |
-| `-UseExistingSpoSession` | Do not create a new SharePoint Online PowerShell session |
-| `-UseExistingExoSession` | Do not create a new Exchange Online PowerShell session |
-| `-KeepGraphSessionAlive` | Do not disconnect the Graph SDK PowerShell session after execution |
-| `-KeepSpoSessionAlive` | Do not disconnect the SharePoint Online session after execution |
-| `-KeepExoSessionAlive` | Do not disconnect the Exchange Online PowerShell session after execution |
+| Argument                   | Description                                                              |
+| -------------------------- | ------------------------------------------------------------------------ |
+| `-UseExistingGraphSession` | Do not create a new Graph SDK PowerShell session                         |
+| `-UseExistingSpoSession`   | Do not create a new SharePoint Online PowerShell session                 |
+| `-UseExistingExoSession`   | Do not create a new Exchange Online PowerShell session                   |
+| `-KeepGraphSessionAlive`   | Do not disconnect the Graph SDK PowerShell session after execution       |
+| `-KeepSpoSessionAlive`     | Do not disconnect the SharePoint Online session after execution          |
+| `-KeepExoSessionAlive`     | Do not disconnect the Exchange Online PowerShell session after execution |
 
 ## Usage
 
@@ -153,41 +151,21 @@ Update-Module -Name DnsClient-PS -Scope AllUsers -Force #Only on Mac and Linux r
 ## ToDo
 
 - Manage Self-service password reset (no API available)
-
 - Enable enterpise state roaming (no API available)
-
 - Manage users allowed to join devices to aad (no API available)
-
 - Create default Conditinal Access polices
-
 - Find external e-mail forwardings
-
-- Restrict access do AAD Portal <https://office365itpros.com/2022/11/29/azure-ad-tenant-creation/> `Get-MgPolicyAuthorizationPolicy | Select-Object -ExpandProperty DefaultUserRolePermissions | Format-List`
-
-- Restrict access to MsolPowerShell <https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.identity.signins/update-mgpolicyauthorizationpolicy?view=graph-powershell-1.0>
-
+- Restrict non-admin users from creating tenants (Only in Graph API Beta)
 - Restrict access to PowerShell for edu tenants <https://learn.microsoft.com/en-us/schooldatasync/blocking-powershell-for-edu>
-
-- Restrict non-admin users from creating tenants (AAD)
-
 - Password policy <https://learn.microsoft.com/en-us/azure/active-directory/authentication/concept-password-ban-bad>
-
 - Create default application protectin policy for iOS and Android
-
 - Manage Enterprise application admin consent request policy <https://learn.microsoft.com/en-us/graph/api/adminconsentrequestpolicy-get?view=graph-rest-1.0&tabs=powershell>
-
 - Check if required Modules are installed and imported -> `#require` is causing performance issues, long script startup times
-
 - List unused licenses
-
 - List Guest accounts <https://blog.atwork.at/post/Identify-guest-users-with-Graph>
-
 - List externally shared files
-
 - Inegrate Azure PowerShell module <https://learn.microsoft.com/en-us/powershell/azure/install-az-ps?view=azps-9.4.0>
-
   - Check if budget is set
-
 - Set language of admin account to en-US
 
 ## Credits
