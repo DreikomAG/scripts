@@ -157,8 +157,9 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 ## ToDo
 
 - Manage Self-service password reset (no API available)
+- Manage Authentication methods available for users / Manage migration till Jan 24 <https://learn.microsoft.com/en-us/azure/active-directory/authentication/how-to-authentication-methods-manage>
 - Enable enterpise state roaming (no API available)
-- Manage users allowed to join devices to aad (no API available)
+- Manage users allowed to join devices to aad <https://learn.microsoft.com/en-us/graph/api/deviceregistrationpolicy-get?view=graph-rest-beta&tabs=powershell>
 - Create default Conditinal Access polices
 - Find external e-mail forwardings
 - Restrict non-admin users from creating tenants (Only in Graph API Beta)
@@ -171,6 +172,8 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 - Inegrate Azure PowerShell module <https://learn.microsoft.com/en-us/powershell/azure/install-az-ps?view=azps-9.4.0>
   - Check if budget is set
 - Set language of admin account to en-US
+- Add Teams best-practice
+  - Block 3.rd party apps
 
 ## Credits
 

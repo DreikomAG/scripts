@@ -352,6 +352,37 @@ function enableBlockMsolPowerShell {
     Update-MgPolicyAuthorizationPolicy -BlockMsolPowerShell
 }
 
+<# TODO: Tenant group settings policy #>
+function checkTenantGroupSettingsReport {
+    param(
+        [System.Boolean]$DisableUsersToCreateUnifiedGroups
+    )
+    Write-Host "Checking group settings"
+    $GroupSettingTemplates = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/groupSettingTemplates?$select=id,displayName"
+    $GroupSettingTemplateUnified = $GroupSettingTemplates.value | Where-Object { $_.displayName -eq "Group.Unified" } | Select-Object -Property id, DisplayName
+
+    $GroupSettings = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/groupSettings?$select=value" 
+    $GroupSettingUnified = $GroupSettings.value | Where-Object { $_.templateId -eq $GroupSettingTemplateUnified.id } | Select-Object -Property id, templateId, values
+
+    if ($DisableUsersToCreateUnifiedGroups) {
+        if ($GroupSettingUnified) { disableUnifiedGroupCreation -GroupSettingTemplateUnified $GroupSettingTemplateUnified -GroupSettingUnified $GroupSettingUnified }  
+        else { disableUnifiedGroupCreation -GroupSettingTemplateUnified $GroupSettingTemplateUnified }
+    }
+}
+
+function disableUnifiedGroupCreation {
+    param(
+        $GroupSettingTemplateUnified,
+        $GroupSettingUnified
+    )
+    $Body = @{
+        templateId = $GroupSettingTemplateUnified.id
+        values     = @( @{ Name = "EnableGroupCreation" ; Value = "false" } )
+    }
+    if ($GroupSettingUnified) { Invoke-MgGraphRequest -Method PATCH -Uri "https://graph.microsoft.com/v1.0/groupSettings/$($GroupSettingUnified.id)" -Body $Body }
+    else { Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/groupSettings" -Body $Body }
+}
+
 <# License SKU section#>
 function checkUsedSKUReport {
     Write-Host "Checking licenses"
