@@ -32,7 +32,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.9.0"
+$Version = "2.10.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -577,6 +577,15 @@ function checkUserMfaStatusReport {
     return $Report
 }
 
+<# Guest user section#>
+function checkGuestUserReport {
+    Write-Host "Checking guest accounts"
+    Select-MgProfile -Name "beta"
+    $Users = Get-MgUser -All -Filter "UserType eq 'Guest'" -Property Id, DisplayName, UserPrincipalName, AccountEnabled, SignInActivity
+    Select-MgProfile -Name "v1.0"
+    return $Users | Select-Object -Property DisplayName, UserPrincipalName, AccountEnabled, @{Name = "LastSignIn"; Expression = { $_.SignInActivity.LastSignInDateTime } } | ConvertTo-HTML -As Table -Fragment -PreContent "<br><h3 id='AAD_GUEST'>Guest accounts</h3>"
+}
+
 <# Security Defaults section #>
 function checkSecurityDefaultsReport {
     param (
@@ -906,6 +915,7 @@ $AADToc = @"
     <li><a href="#AAD_ADMINS">Admin role assignments</a></li>
     <li><a href="#AAD_BG">BreakGlass account</a></li>
     <li><a href="#AAD_MFA">User MFA status</a></li>
+    <li><a href="#AAD_GUEST">Guest accounts</a></li>
     <li><a href="#AAD_SEC_DEFAULTS">Security Defaults</a></li>
     <li><a href="#AAD_CA">Conditional Access policies</a></li>
     <li><a href="#AAD_CA_LOCATIONS">Named locations</a></li>
@@ -956,6 +966,7 @@ $Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnter
 $Report += checkAdminRoleReport
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
 $Report += checkUserMfaStatusReport
+$Report += checkGuestUserReport
 $Report += checkSecurityDefaultsReport -Enable $script:EnableSecurityDefaults -Disable $script:DisableSecurityDefaults
 $Report += checkConditionalAccessPolicyReport
 $Report += checkNamedLocationReport
