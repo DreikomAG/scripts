@@ -1,5 +1,18 @@
 # Autounattend
 
+## Usage
+
+- Copy all files from [Autounattend](./) folder to the Windows installation USB stick root folder
+
+- Edit the [wifi.txt](./wifi.txt) file and replaye `<ssid>` and `<psk>` with your own values
+
+    Example `wifi.txt`
+
+    ```raw
+    mywlanname
+    my$secretpw!
+    ```
+
 ## Logs
 
 Setup.ps1: `C:\Temp\Autounattend.log`
@@ -31,3 +44,4 @@ HPIA: `C:\Hpia\HPIAReport`
 - Install and run HP Image Assistant Driver updates
 
 - Install Windows Updates and reboot
+- 
