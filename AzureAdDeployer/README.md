@@ -15,6 +15,7 @@
   - Allowed  to create secutity groups: show, disable
   - Allowed to read other users: show, disable
   - BlockMsolPowerShell: show, enable
+- Licenses: show
 - Admin role assignments: show
 - User mfa status: show
 - Guest accounts: show
@@ -166,7 +167,6 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 - Create default application protectin policy for iOS and Android
 - Manage Enterprise application admin consent request policy <https://learn.microsoft.com/en-us/graph/api/adminconsentrequestpolicy-get?view=graph-rest-1.0&tabs=powershell>
 - Check if required Modules are installed and imported -> `#require` is causing performance issues, long script startup times
-- List unused licenses
 - List externally shared files
 - Inegrate Azure PowerShell module <https://learn.microsoft.com/en-us/powershell/azure/install-az-ps?view=azps-9.4.0>
   - Check if budget is set

@@ -32,7 +32,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.10.0"
+$Version = "2.11.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -236,7 +236,7 @@ function connectGraph {
         Connect-MgGraph -Scopes "Policy.Read.All, Policy.ReadWrite.ConditionalAccess, Application.Read.All,
 User.Read.All, User.ReadWrite.All, Domain.Read.All, Directory.Read.All, Directory.ReadWrite.All,
 RoleManagement.ReadWrite.Directory, DeviceManagementApps.Read.All, DeviceManagementApps.ReadWrite.All,
-Policy.ReadWrite.Authorization, Sites.Read.All, AuditLog.Read.All, UserAuthenticationMethod.Read.All" | Out-Null
+Policy.ReadWrite.Authorization, Sites.Read.All, AuditLog.Read.All, UserAuthenticationMethod.Read.All, Organization.Read.All" | Out-Null
     }
     if ((Get-MgContext) -ne "") {
         Write-Host "Connected to Microsoft Graph PowerShell using $((Get-MgContext).Account) account"
@@ -350,6 +350,103 @@ function disableUsersToCreateSecurityGroups {
 function enableBlockMsolPowerShell {
     Write-Host "Disable legacy MsolPowerShell access"
     Update-MgPolicyAuthorizationPolicy -BlockMsolPowerShell
+}
+
+<# License SKU section#>
+function checkUsedSKUReport {
+    Write-Host "Checking licenses"
+    $SKU = Get-MgSubscribedSku -Property SkuPartNumber, ConsumedUnits, PrepaidUnits, AppliesTo
+    return $SKU | Select-Object -Property @{Name = "Name"; Expression = { 
+            if ($_.SkuPartNumber -eq "EXCHANGESTANDARD") { return "Exchange Online (Plan 1)" }
+            if ($_.SkuPartNumber -eq "EXCHANGEENTERPRISE") { return "Exchange Online (PLAN 2)" }
+            if ($_.SkuPartNumber -eq "EXCHANGEARCHIVE_ADDON") { return "Exchange Online Archiving for Exchange Online" }
+            if ($_.SkuPartNumber -eq "EXCHANGE_S_ESSENTIALS") { return "Exchange Online Essentials" }
+
+            if ($_.SkuPartNumber -eq "SHAREPOINTSTANDARD") { return "SharePoint Online (Plan 1)" }
+            if ($_.SkuPartNumber -eq "SHAREPOINTENTERPRISE") { return "SharePoint Online (Plan 2)" }
+
+            if ($_.SkuPartNumber -eq "AAD_BASIC") { return "Azure Active Directory Basic" }
+            if ($_.SkuPartNumber -eq "AAD_PREMIUM") { return "Azure Active Directory Premium P1" }
+            if ($_.SkuPartNumber -eq "AAD_PREMIUM_P2") { return "Azure Active Directory Premium P2" }
+
+            if ($_.SkuPartNumber -eq "EMS") { return "Enterprise Mobility + Security E3" }
+            if ($_.SkuPartNumber -eq "EMSPREMIUM") { return "Enterprise Mobility + Security E5" }
+
+            if ($_.SkuPartNumber -eq "INTUNE_A") { return "Intune" }
+            if ($_.SkuPartNumber -eq "INTUNE_A_D") { return "Microsoft Intune Device" }
+            if ($_.SkuPartNumber -eq "INTUNE_SMB") { return "Microsoft Intune SMB" }
+
+            if ($_.SkuPartNumber -eq "WINDOWS_STORE") { return "Windows Store for Business" }
+            if ($_.SkuPartNumber -eq "RMSBASIC") { return "Rights Management Service Basic Content Protection" }
+            if ($_.SkuPartNumber -eq "RIGHTSMANAGEMENT_ADHOC") { return "Rights Management Adhoc" }
+
+            if ($_.SkuPartNumber -eq "VISIO_PLAN1_DEPT") { return "Visio Plan 1" }
+            if ($_.SkuPartNumber -eq "VISIO_PLAN2_DEPT	") { return "Visio Plan 2" }
+            if ($_.SkuPartNumber -eq "VISIOONLINE_PLAN1") { return "Visio Online Plan 1" }
+            if ($_.SkuPartNumber -eq "VISIOCLIENT") { return "Visio Online Plan 2" }
+
+            if ($_.SkuPartNumber -eq "PROJECTESSENTIALS") { return "Project Online Essentials" }
+            if ($_.SkuPartNumber -eq "PROJECTPREMIUM") { return "Project Online Premium" }
+            if ($_.SkuPartNumber -eq "PROJECT_P1") { return "Project Plan 1" }
+            if ($_.SkuPartNumber -eq "PROJECTPROFESSIONAL") { return "Project Plan 3" }
+
+            if ($_.SkuPartNumber -eq "MS_TEAMS_IW") { return "Microsoft Teams Trial" }
+            if ($_.SkuPartNumber -eq "MCOCAP") { return "Microsoft Teams Shared Devices" }
+            if ($_.SkuPartNumber -eq "MCOEV") { return "Microsoft Teams Phone Standard" }
+            if ($_.SkuPartNumber -eq "MCOEV_DOD") { return "Microsoft Teams Phone Standard for DOD" }
+            if ($_.SkuPartNumber -eq "MCOTEAMS_ESSENTIALS") { return "Teams Phone with Calling Plan" }
+            if ($_.SkuPartNumber -eq "TEAMS_FREE") { return "Microsoft Teams (Free)" }
+            if ($_.SkuPartNumber -eq "Teams_Ess") { return "Microsoft Teams Essentials" }
+            if ($_.SkuPartNumber -eq "Microsoft_Teams_Premium") { return "Microsoft Teams Premium" }
+            if ($_.SkuPartNumber -eq "TEAMS_EXPLORATORY") { return "Microsoft Teams Exploratory" }
+            if ($_.SkuPartNumber -eq "BUSINESS_VOICE_DIRECTROUTING") { return "Microsoft 365 Business Voice (without calling plan)" }
+            if ($_.SkuPartNumber -eq "PHONESYSTEM_VIRTUALUSER") { return "Microsoft Teams Phone Resoure Account" }
+            if ($_.SkuPartNumber -eq "Microsoft_Teams_Rooms_Basic_without_Audio_Conferencing") { return "Microsoft Teams Rooms Basic without Audio Conferencing" }
+            if ($_.SkuPartNumber -eq "Microsoft_Teams_Rooms_Pro") { return "Microsoft Teams Rooms Pro" }
+            if ($_.SkuPartNumber -eq "BUSINESS_VOICE_MED2") { return "Microsoft 365 Business Voice" }
+            if ($_.SkuPartNumber -eq "MCOPSTN_5") { return "Microsoft 365 Domestic Calling Plan (120 Minutes)" }
+
+            if ($_.SkuPartNumber -eq "POWER_BI_PRO") { return "Power BI Pro" }
+            if ($_.SkuPartNumber -eq "POWERAPPS_VIRAL") { return "Microsoft Power Apps Plan 2 Trial" }
+            if ($_.SkuPartNumber -eq "SPZA_IW") { return "App Connect IW" }
+            if ($_.SkuPartNumber -eq "FLOW_FREE") { return "Microsoft Flow Free" }
+            if ($_.SkuPartNumber -eq "CCIBOTS_PRIVPREV_VIRAL") { return "Power Virtual Agents Viral Trial" }
+            if ($_.SkuPartNumber -eq "VIRTUAL_AGENT_BASE") { return "Power Virtual Agent" }
+
+            if ($_.SkuPartNumber -eq "WIN_DEF_ATP") { return "Microsoft Defender for Endpoint" }
+            if ($_.SkuPartNumber -eq "ADALLOM_STANDALONE") { return "Microsoft Cloud App Security" }
+            if ($_.SkuPartNumber -eq "DEFENDER_ENDPOINT_P1") { return "Microsoft Defender for Endpoint P1" }
+            if ($_.SkuPartNumber -eq "MDATP_Server") { return "Microsoft Defender for Endpoint Server" }
+            if ($_.SkuPartNumber -eq "ATP_ENTERPRISE_FACULTY") { return "Microsoft Defender for Office 365 (Plan 1) Faculty" }
+            if ($_.SkuPartNumber -eq "ATA") { return "Microsoft Defender for Identity" }
+            if ($_.SkuPartNumber -eq "ATP_ENTERPRISE") { return "Microsoft Defender for Office 365 (Plan 1)" }
+
+            if ($_.SkuPartNumber -eq "M365_F1") { return "Microsoft 365 F1" }
+            if ($_.SkuPartNumber -eq "SPE_F1") { return "Microsoft 365 F3" }
+            if ($_.SkuPartNumber -eq "DESKLESSPACK") { return "Office 365 F3" }
+
+            if ($_.SkuPartNumber -eq "SPE_E3") { return "Microsoft 365 E3" }
+            if ($_.SkuPartNumber -eq "SPE_E5") { return "Microsoft 365 E5" }
+            if ($_.SkuPartNumber -eq "SPE_E5_CALLINGMINUTES") { return "Microsoft 365 E5 with Calling Minutes" }
+            if ($_.SkuPartNumber -eq "INFORMATION_PROTECTION_COMPLIANCE") { return "Microsoft 365 E5 Compliance" }
+            if ($_.SkuPartNumber -eq "IDENTITY_THREAT_PROTECTION") { return "Microsoft 365 E5 Security" }
+            if ($_.SkuPartNumber -eq "SPE_E5_NOPSTNCONF") { return "Microsoft 365 E5 without Audio Conferencing" }
+            
+            if ($_.SkuPartNumber -eq "STANDARDPACK") { return "Office 365 E1" }
+            if ($_.SkuPartNumber -eq "STANDARDWOFFPACK") { return "Office 365 E2" }
+            if ($_.SkuPartNumber -eq "ENTERPRISEPACK") { return "Office 365 E3" }
+            if ($_.SkuPartNumber -eq "ENTERPRISEWITHSCAL") { return "Office 365 E4" }
+            if ($_.SkuPartNumber -eq "ENTERPRISEPREMIUM") { return "Office 365 E5" }
+            if ($_.SkuPartNumber -eq "ENTERPRISEPREMIUM_NOPSTNCONF") { return "Office 365 E5 without Audio Conferencing" }
+
+            if ($_.SkuPartNumber -eq "SPB") { return "Microsoft 365 Business Premium" }
+            if ($_.SkuPartNumber -eq "O365_BUSINESS_PREMIUM") { return "Microsoft 365 Business Standard" }
+            if (($_.SkuPartNumber -eq "O365_BUSINESS") -or ($_.SkuPartNumber -eq "SMB_BUSINESS")) { return "Microsoft 365 Apps for Business" }
+            if ($_.SkuPartNumber -eq "OFFICESUBSCRIPTION") { return "Microsoft 365 Apps for enterprise" }
+            if (($_.SkuPartNumber -eq "O365_BUSINESS_ESSENTIALS") -or ($_.SkuPartNumber -eq "SMB_BUSINESS_ESSENTIALS")) { return "Microsoft 365 Business Basic" }
+            else { return $_.SkuPartNumber }
+        } 
+    }, @{Name = "Total"; Expression = { $_.PrepaidUnits.Enabled } }, @{Name = "Assigned"; Expression = { $_.ConsumedUnits } } , @{Name = "Available"; Expression = { ($_.PrepaidUnits.Enabled) - ($_.ConsumedUnits) } } , AppliesTo | ConvertTo-Html -As Table -Fragment -PreContent "<br><h3 id='AAD_SKU'>Licenses</h3>"
 }
 
 <# User Account section #>
@@ -912,6 +1009,7 @@ $AADToc = @"
 <h3 class='TOC'><a href="#AAD">Azure Active Directory</a></h3>
 <ul>
     <li><a href="#AAD_USER_SETTINGS">Tenant user settings</a></li>
+    <li><a href="#AAD_SKU">Licenses</a></li>
     <li><a href="#AAD_ADMINS">Admin role assignments</a></li>
     <li><a href="#AAD_BG">BreakGlass account</a></li>
     <li><a href="#AAD_MFA">User MFA status</a></li>
@@ -963,6 +1061,7 @@ $Report += organizationReport
 $Report += $Toc
 $Report += "<br><hr><h2 id='AAD'>Azure Active Directory</h2>"
 $Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent -DisableUsersToCreateAppRegistrations $script:DisableUsersToCreateAppRegistrations -DisableUsersToReadOtherUsers $script:DisableUsersToReadOtherUsers -DisableUsersToCreateSecurityGroups $script:DisableUsersToCreateSecurityGroups -EnableBlockMsolPowerShell $script:EnableBlockMsolPowerShell
+$Report += checkUsedSKUReport
 $Report += checkAdminRoleReport
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
 $Report += checkUserMfaStatusReport
