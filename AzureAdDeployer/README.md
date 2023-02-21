@@ -13,7 +13,7 @@
   - Enterprise Application user consent: show, disable
   - Allowed to create apps: show, disable
   - Allowed to create secutity groups: show, disable
-  - Allowed to create unified groups (Microsoft 365 groups): show, disable
+  - Allowed to create unified groups (Microsoft 365 groups): show, disable, create group
   - Allowed to read other users: show, disable
   - Allowed to create tenants: show
   - BlockMsolPowerShell: show, enable
@@ -111,6 +111,7 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 | `-DisableUsersToReadOtherUsers`           | Disable users to read other users              |
 | `-DisableUsersToCreateSecurityGroups`     | Disable users to create security groups        |
 | `-DisableUsersToCreateUnifiedGroups`      | Disable users to create unified groups         |
+| `-CreateUnifiedGroupCreationAllowedGroup` | Create UnifiedGroupCreationAllowed group       |
 | `-EnableBlockMsolPowerShell`              | Disable legacy MsolPowerShell access           |
 
 ### SharePoint Online
@@ -173,9 +174,13 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 - List externally shared files
 - Inegrate Azure PowerShell module <https://learn.microsoft.com/en-us/powershell/azure/install-az-ps?view=azps-9.4.0>
   - Check if budget is set
+  - Set usage location
 - Set language of admin account to en-US
 - Add Teams best-practice
   - Block 3.rd party apps
+- Exchange Online
+  - Switch to graph api where possible
+  - Show security settings (spam, quarantine, safe links, etc)
 
 ## Credits
 

@@ -25,6 +25,7 @@ Param(
     [switch]$DisableUsersToReadOtherUsers,
     [switch]$DisableUsersToCreateSecurityGroups,
     [switch]$DisableUsersToCreateUnifiedGroups,
+    [switch]$CreateUnifiedGroupCreationAllowedGroup,
     [switch]$EnableBlockMsolPowerShell,
     [switch]$SetMailboxLanguage,
     [switch]$DisableSharedMailboxLogin,
@@ -33,7 +34,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.14.0"
+$Version = "2.15.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -47,6 +48,8 @@ $script:InteractiveMode = $false
 $script:MailboxLanguageCode = "de-CH"
 $script:MailboxTimeZone = "W. Europe Standard Time"
 
+$script:UnifiedGroupCreationAllowedGroupName = "M365_GROUP_CREATORS"
+
 $script:CustomerName = ""
 
 $script:CreateBreakGlassAccount = $CreateBreakGlassAccount
@@ -57,6 +60,7 @@ $script:DisableUsersToCreateAppRegistrations = $DisableUsersToCreateAppRegistrat
 $script:DisableUsersToReadOtherUsers = $DisableUsersToReadOtherUsers
 $script:DisableUsersToCreateSecurityGroups = $DisableUsersToCreateSecurityGroups
 $script:DisableUsersToCreateUnifiedGroups = $DisableUsersToCreateUnifiedGroups
+$script:CreateUnifiedGroupCreationAllowedGroup = $CreateUnifiedGroupCreationAllowedGroup
 $script:EnableBlockMsolPowerShell = $EnableBlockMsolPowerShell
 
 $script:SetMailboxLanguage = $SetMailboxLanguage
@@ -151,7 +155,8 @@ Azure Active Directory options:
 6: Disable user to read other users: $($script:DisableUsersToReadOtherUsers)
 7: Disable users to create security groups: $($script:DisableUsersToCreateSecurityGroups)
 8: Disable users to create unified groups: $($script:DisableUsersToCreateUnifiedGroups)
-9: Disable legacy MsolPowerShell access: $($script:EnableBlockMsolPowerShell)
+9: Create UnifiedGroupCreationAllowed group: $($script:CreateUnifiedGroupCreationAllowedGroup)
+0: Disable legacy MsolPowerShell access: $($script:EnableBlockMsolPowerShell)
 B: Back to main menu
 "@
         $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
@@ -163,9 +168,10 @@ B: Back to main menu
         $DisableUsersToReadOtherUsersOption = New-Object System.Management.Automation.Host.ChoiceDescription "&6", "Disable user to read other users"
         $DisableUsersToCreateSecurityGroupsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&7", "Disable users to create security groups"
         $DisableUsersToCreateUnifiedGroupsOption = New-Object System.Management.Automation.Host.ChoiceDescription "&8", "Disable users to create unified groups"
-        $EnableBlockMsolPowerShellOption = New-Object System.Management.Automation.Host.ChoiceDescription "&9", "Disable legacy MsolPowerShell access"
+        $CreateUnifiedGroupCreationAllowedGroupOption = New-Object System.Management.Automation.Host.ChoiceDescription "&9", "Create UnifiedGroupCreationAllowed group"
+        $EnableBlockMsolPowerShellOption = New-Object System.Management.Automation.Host.ChoiceDescription "&0", "Disable legacy MsolPowerShell access"
 
-        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($BackOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $DisableUsersToCreateAppRegistrationsOption, $DisableUsersToReadOtherUsersOption, $DisableUsersToCreateSecurityGroupsOption, $DisableUsersToCreateUnifiedGroupsOption, $EnableBlockMsolPowerShellOption)
+        $Options = [System.Management.Automation.Host.ChoiceDescription[]]($BackOption, $CreateBreakGlassAccountOption, $EnableSecurityDefaultsOption, $DisableSecurityDefaultsOption, $DisableEnterpiseApplicationUserConsentOption, $DisableUsersToCreateAppRegistrationsOption, $DisableUsersToReadOtherUsersOption, $DisableUsersToCreateSecurityGroupsOption, $DisableUsersToCreateUnifiedGroupsOption, $CreateUnifiedGroupCreationAllowedGroupOption, $EnableBlockMsolPowerShellOption)
         Write-Host $Status
         $result = $host.ui.PromptForChoice("", "", $Options, $StartOptionValue)
         switch ($result) {
@@ -178,7 +184,8 @@ B: Back to main menu
             6 { $script:DisableUsersToReadOtherUsers = ! $script:DisableUsersToReadOtherUsers }
             7 { $script:DisableUsersToCreateSecurityGroups = ! $script:DisableUsersToCreateSecurityGroups }
             8 { $script:DisableUsersToCreateUnifiedGroups = ! $script:DisableUsersToCreateUnifiedGroups }
-            9 { $script:EnableBlockMsolPowerShell = ! $script:EnableBlockMsolPowerShell }
+            9 { $script:CreateUnifiedGroupCreationAllowedGroup = ! $script:CreateUnifiedGroupCreationAllowedGroup }
+            10 { $script:EnableBlockMsolPowerShell = ! $script:EnableBlockMsolPowerShell }
         }
     }
 }
@@ -316,6 +323,7 @@ function checkTenanUserSettingsReport {
         [System.Boolean]$DisableUsersToReadOtherUsers,
         [System.Boolean]$DisableUsersToCreateSecurityGroups,
         [System.Boolean]$DisableUsersToCreateUnifiedGroups,
+        [System.Boolean]$CreateUnifiedGroupCreationAllowedGroup,
         [System.Boolean]$EnableBlockMsolPowerShell
     )
     if ($DisableUserConsent) { disableApplicationUserConsent }
@@ -323,6 +331,7 @@ function checkTenanUserSettingsReport {
     if ($DisableUsersToReadOtherUsers) { disableUsersToReadOtherUsers }
     if ($DisableUsersToCreateSecurityGroups) { disableUsersToCreateSecurityGroups }
     if ($DisableUsersToCreateUnifiedGroups) { disableUsersToCreateUnifiedGroups }
+    if ($CreateUnifiedGroupCreationAllowedGroup) { createUnifiedGroupCreationAllowedGroup }
     if ($EnableBlockMsolPowerShell) { enableBlockMsolPowerShell }
     Write-Host "Checking user settings"
     $Policy = Get-MgPolicyAuthorizationPolicy -Property BlockMsolPowerShell, DefaultUserRolePermissions
@@ -330,6 +339,7 @@ function checkTenanUserSettingsReport {
     @{Name = "AllowedToCreateApps"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToCreateApps } },
     @{Name = "AllowedToCreateSecurityGroups"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToCreateSecurityGroups } },
     @{Name = "AllowedToCreateUnifiedGroups"; Expression = { checkAllowedToCreateUnifiedGroups } },
+    @{Name = "AllowedToCreateUnifiedGroupsGroupName"; Expression = { checkUnifiedGroupCreationAllowedGroup } },
     @{Name = "AllowedToReadOtherUsers"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToReadOtherUsers } },
     @{Name = "AllowedToCreateTenants"; Expression = { checkAllowedToCreateTenants } },
     BlockMsolPowerShell | ConvertTo-Html -As List -Fragment -PreContent "<h3 id='AAD_USER_SETTINGS'>User settings</h3>" -PostContent "<p>PermissionGrantPoliciesAssigned: empty (user consent not allowed), microsoft-user-default-legacy (user consent allowed for all apps), microsoft-user-default-low (user consent allowed for low permission apps)</p><p>Unified groups = Microsoft 365 groups</p>"
@@ -371,6 +381,26 @@ function checkAllowedToCreateUnifiedGroups {
     }
     return $true
 }
+function checkUnifiedGroupCreationAllowedGroup {
+    $GroupSettingsUnified = getGroupSettingsUnified
+    if ($GroupId = ($GroupSettingsUnified.values | Where-Object name -eq "GroupCreationAllowedGroupId").value) {
+        return (Get-MgGroup -GroupId $GroupId -Property DisplayName).DisplayName
+    }
+}
+function createUnifiedGroupCreationAllowedGroup {
+    Write-Host "Creating UnifiedGroupCreationAllowed group:" $script:UnifiedGroupCreationAllowedGroupName
+    if (checkUnifiedGroupCreationAllowedGroup) {
+        Write-Error "UnifiedGroupCreationAllowed group already assigned"
+        return
+    }
+    if ($GroupId = (Get-MgGroup -Property Id, DisplayName -Filter "DisplayName eq '$($script:UnifiedGroupCreationAllowedGroupName)'").Id) { Write-Host "UnifiedGroupCreationAllowed group already exists" } else { $GroupId = (New-MgGroup -DisplayName $script:UnifiedGroupCreationAllowedGroupName -MailEnabled:$False -MailNickname $script:UnifiedGroupCreationAllowedGroupName -SecurityEnabled).Id }
+    $Body = @{
+        templateId = (getGroupSettingsTemplateUnified).id
+        values     = @( @{ Name = "GroupCreationAllowedGroupId" ; Value = $GroupId } )
+    }
+    if ($GroupSettingsUnified = getGroupSettingsUnified) { Invoke-MgGraphRequest -Method PATCH -Uri "https://graph.microsoft.com/v1.0/groupSettings/$($GroupSettingsUnified.id)" -Body $Body }
+    else { Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/groupSettings" -Body $Body }
+}
 function getGroupSettingsTemplateUnified {
     $GroupSettingTemplates = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/groupSettingTemplates?$select=value"
     return $GroupSettingTemplates.value | Where-Object { $_.displayName -eq "Group.Unified" } | Select-Object -Property id, DisplayName
@@ -395,7 +425,7 @@ function checkAllowedToCreateTenants {
 <# Device join settings#>
 function checkDeviceJoinSettingsReport {
     Write-Host "Checking device join settings"
-    $DeviceSettings = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy?$select=azureAdJoin,userDeviceQuota,multiFactorAuthConfiguration"
+    $DeviceSettings = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy?$select=azureAdJoin, userDeviceQuota, multiFactorAuthConfiguration"
     $Report = $DeviceSettings | Select-Object -Property @{Name = "Require MFA"; Expression = { if ($_.multiFactorAuthConfiguration -eq 1) { return $true } return $false } },
     @{Name = "Allowed to join"; Expression = { if ($_.azureAdJoin.appliesTo -eq 1) { return "All users" } if ($_.azureAdJoin.appliesTo -eq 2) { return "Selected users" } return "No users" } },
     @{Name = "Users"; Expression = { $Users = @() ; foreach ($UserId in $_.azureAdJoin.allowedUsers) { $Users += (Get-MgUser -UserId $UserId -Property UserPrincipalName).UserPrincipalName } return $Users -join "; " } },
@@ -1119,7 +1149,7 @@ $Report += organizationReport
 $Report += $Toc
 $Report += "<br><hr><h2 id='AAD'>Azure Active Directory</h2>"
 Write-Host "Azure Active Directory"
-$Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent -DisableUsersToCreateAppRegistrations $script:DisableUsersToCreateAppRegistrations -DisableUsersToReadOtherUsers $script:DisableUsersToReadOtherUsers -DisableUsersToCreateSecurityGroups $script:DisableUsersToCreateSecurityGroups -DisableUsersToCreateUnifiedGroups $script:DisableUsersToCreateUnifiedGroups -EnableBlockMsolPowerShell $script:EnableBlockMsolPowerShell
+$Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent -DisableUsersToCreateAppRegistrations $script:DisableUsersToCreateAppRegistrations -DisableUsersToReadOtherUsers $script:DisableUsersToReadOtherUsers -DisableUsersToCreateSecurityGroups $script:DisableUsersToCreateSecurityGroups -DisableUsersToCreateUnifiedGroups $script:DisableUsersToCreateUnifiedGroups -CreateUnifiedGroupCreationAllowedGroup $script:CreateUnifiedGroupCreationAllowedGroup -EnableBlockMsolPowerShell $script:EnableBlockMsolPowerShell
 $Report += checkDeviceJoinSettingsReport
 $Report += checkUsedSKUReport
 $Report += checkAdminRoleReport
