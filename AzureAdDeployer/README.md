@@ -9,12 +9,13 @@
 
 ### Azure Active Directory
 
-- Tenant user settings
+- User settings
   - Enterprise Application user consent: show, disable
   - Allowed to create apps: show, disable
-  - Allowed  to create secutity groups: show, disable
-  - Allowed  to create unified groups (Microsoft 365 groups): show, disable
+  - Allowed to create secutity groups: show, disable
+  - Allowed to create unified groups (Microsoft 365 groups): show, disable
   - Allowed to read other users: show, disable
+  - Allowed to create tenants: show
   - BlockMsolPowerShell: show, enable
 - Device join settings: show
 - Licenses: show
@@ -106,8 +107,8 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 | `-EnableSecurityDefaults`                 | Enable security defaults                       |
 | `-DisableSecurityDefaults`                | Disable security defaults                      |
 | `-DisableEnterpiseApplicationUserConsent` | Disable enterprise application user consent    |
-| `-DisableUsersToCreateAppRegistrations`   | Disable user to create app registrations       |
-| `-DisableUsersToReadOtherUsers`           | Disable user to read other users               |
+| `-DisableUsersToCreateAppRegistrations`   | Disable users to create app registrations      |
+| `-DisableUsersToReadOtherUsers`           | Disable users to read other users              |
 | `-DisableUsersToCreateSecurityGroups`     | Disable users to create security groups        |
 | `-DisableUsersToCreateUnifiedGroups`      | Disable users to create unified groups         |
 | `-EnableBlockMsolPowerShell`              | Disable legacy MsolPowerShell access           |
@@ -164,7 +165,6 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 - Enable enterpise state roaming (no API available)
 - Create default Conditinal Access polices
 - Find external e-mail forwardings
-- Restrict non-admin users from creating tenants (Only in Graph API Beta)
 - Restrict access to PowerShell for edu tenants <https://learn.microsoft.com/en-us/schooldatasync/blocking-powershell-for-edu>
 - Password policy <https://learn.microsoft.com/en-us/azure/active-directory/authentication/concept-password-ban-bad>
 - Create default application protectin policy for iOS and Android

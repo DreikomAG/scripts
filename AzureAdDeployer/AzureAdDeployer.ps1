@@ -33,7 +33,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.13.0"
+$Version = "2.14.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -308,7 +308,7 @@ function organizationReport {
     return  "<h2>$($Organization.DisplayName) ($($Organization.Id))</h2>"
 }
 
-<# Tenant user settings policy section #>
+<# User settings policy section #>
 function checkTenanUserSettingsReport {
     param(
         [System.Boolean]$DisableUserConsent,
@@ -324,14 +324,15 @@ function checkTenanUserSettingsReport {
     if ($DisableUsersToCreateSecurityGroups) { disableUsersToCreateSecurityGroups }
     if ($DisableUsersToCreateUnifiedGroups) { disableUsersToCreateUnifiedGroups }
     if ($EnableBlockMsolPowerShell) { enableBlockMsolPowerShell }
-    Write-Host "Checking tenant user settings"
+    Write-Host "Checking user settings"
     $Policy = Get-MgPolicyAuthorizationPolicy -Property BlockMsolPowerShell, DefaultUserRolePermissions
     $Report = $Policy | Select-Object -Property  @{Name = "PermissionGrantPoliciesAssigned"; Expression = { [string]$_.DefaultUserRolePermissions.PermissionGrantPoliciesAssigned } },
     @{Name = "AllowedToCreateApps"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToCreateApps } },
     @{Name = "AllowedToCreateSecurityGroups"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToCreateSecurityGroups } },
     @{Name = "AllowedToCreateUnifiedGroups"; Expression = { checkAllowedToCreateUnifiedGroups } },
     @{Name = "AllowedToReadOtherUsers"; Expression = { [string]$_.DefaultUserRolePermissions.AllowedToReadOtherUsers } },
-    BlockMsolPowerShell | ConvertTo-Html -As List -Fragment -PreContent "<h3 id='AAD_USER_SETTINGS'>Tenant user settings</h3>" -PostContent "<p>PermissionGrantPoliciesAssigned: empty (user consent not allowed), microsoft-user-default-legacy (user consent allowed for all apps), microsoft-user-default-low (user consent allowed for low permission apps)</p><p>Unified groups = Microsoft 365 groups</p>"
+    @{Name = "AllowedToCreateTenants"; Expression = { checkAllowedToCreateTenants } },
+    BlockMsolPowerShell | ConvertTo-Html -As List -Fragment -PreContent "<h3 id='AAD_USER_SETTINGS'>User settings</h3>" -PostContent "<p>PermissionGrantPoliciesAssigned: empty (user consent not allowed), microsoft-user-default-legacy (user consent allowed for all apps), microsoft-user-default-low (user consent allowed for low permission apps)</p><p>Unified groups = Microsoft 365 groups</p>"
 
     $Report = $Report -Replace "<td>PermissionGrantPoliciesAssigned:</td><td>ManagePermissionGrantsForSelf.microsoft-user-default-legacy</td>", "<td>PermissionGrantPoliciesAssigned:</td><td class='red'>microsoft-user-default-legacy</td>"
     $Report = $Report -Replace "<td>PermissionGrantPoliciesAssigned:</td><td>ManagePermissionGrantsForSelf.microsoft-user-default-low</td>", "<td>PermissionGrantPoliciesAssigned:</td><td class='orange'>microsoft-user-default-low</td>"
@@ -340,6 +341,7 @@ function checkTenanUserSettingsReport {
     $Report = $Report -Replace "<td>AllowedToCreateUnifiedGroups:</td><td>True</td>", "<td>AllowedToCreateUnifiedGroups:</td><td class='red'>True</td>"
     $Report = $Report -Replace "<td>AllowedToCreateUnifiedGroups:</td><td>false</td>", "<td>AllowedToCreateUnifiedGroups:</td><td>False</td>"
     $Report = $Report -Replace "<td>AllowedToReadOtherUsers:</td><td>True</td>", "<td>AllowedToReadOtherUsers:</td><td class='red'>True</td>"
+    $Report = $Report -Replace "<td>AllowedToCreateTenants:</td><td>True</td>", "<td>AllowedToCreateTenants:</td><td class='red'>True</td>"
     $Report = $Report -Replace "<td>BlockMsolPowerShell:</td><td>False</td>", "<td>BlockMsolPowerShell:</td><td class='red'>False</td>"
     return $Report
 }
@@ -348,11 +350,11 @@ function disableApplicationUserConsent {
     Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ "PermissionGrantPoliciesAssigned" = @() }
 }
 function disableUsersToCreateAppRegistrations {
-    Write-Host "Disable user to create app registrations"
+    Write-Host "Disable users to create app registrations"
     Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ "AllowedToCreateApps" = $false }
 }
 function disableUsersToReadOtherUsers {
-    Write-Host "Disable user to read other users"
+    Write-Host "Disable users to read other users"
     Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ "AllowedToReadOtherUsers" = $false }
 }
 function disableUsersToCreateSecurityGroups {
@@ -384,6 +386,10 @@ function disableUsersToCreateUnifiedGroups {
     }
     if ($GroupSettingsUnified = getGroupSettingsUnified) { Invoke-MgGraphRequest -Method PATCH -Uri "https://graph.microsoft.com/v1.0/groupSettings/$($GroupSettingsUnified.id)" -Body $Body }
     else { Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/groupSettings" -Body $Body }
+}
+function checkAllowedToCreateTenants {
+    $DefaultUserRolePermissions = (Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy").defaultUserRolePermissions
+    return $DefaultUserRolePermissions["allowedToCreateTenants"]
 }
 
 <# Device join settings#>
@@ -1059,7 +1065,7 @@ $GlobalToc = "<br><hr><h2>Contents</h2>"
 $AADToc = @"
 <h3 class='TOC'><a href="#AAD">Azure Active Directory</a></h3>
 <ul>
-    <li><a href="#AAD_USER_SETTINGS">Tenant user settings</a></li>
+    <li><a href="#AAD_USER_SETTINGS">User settings</a></li>
     <li><a href="#AAD_DEVICE_JOIN_SETTINGS">Device join settings</a></li>
     <li><a href="#AAD_SKU">Licenses</a></li>
     <li><a href="#AAD_ADMINS">Admin role assignments</a></li>
