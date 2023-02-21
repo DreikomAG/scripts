@@ -4,7 +4,7 @@
 
 ### General
 
-- Generates a HTML report to your Desktop called `Microsoft365-Report-<customer_name>.html`
+- Generates a HTML report to your desktop called `Microsoft365-Report-<customer_name>.html`
 - Interactive console GUI
 
 ### Azure Active Directory
@@ -13,6 +13,7 @@
   - Enterprise Application user consent: show, disable
   - Allowed to create apps: show, disable
   - Allowed  to create secutity groups: show, disable
+  - Allowed  to create unified groups (Microsoft 365 groups): show, disable
   - Allowed to read other users: show, disable
   - BlockMsolPowerShell: show, enable
 - Licenses: show
@@ -20,8 +21,8 @@
 - User mfa status: show
 - Guest accounts: show
 - BreakGlass account: show, create
-- Security Defaults: show, enable, disable
-- Conditional Access policies: show, list locations
+- Security sefaults: show, enable, disable
+- Conditional access policies: show, list locations
 - App protection policies: show
 
 ### SharePoint Online
@@ -29,7 +30,7 @@
 - Tenant settings:
   - Legacy authentication protocols enabled: show
   - Add to OneDrive button: show, disable
-  - Conditional Access policy: show
+  - Conditional access policy: show
   - Sharing capability: show
   - Prevent external users from resharing: show
   - Default sharing link type: show
@@ -101,12 +102,13 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 | Argument                                  | Description                                    |
 | ----------------------------------------- | ---------------------------------------------- |
 | `-CreateBreakGlassAccount`                | Create a BreakGlass Account if no one is found |
-| `-EnableSecurityDefaults`                 | Enable Security defaults                       |
-| `-DisableSecurityDefaults`                | Disable Security defaults                      |
-| `-DisableEnterpiseApplicationUserConsent` | Disable Enterprise Application user consent    |
+| `-EnableSecurityDefaults`                 | Enable security defaults                       |
+| `-DisableSecurityDefaults`                | Disable security defaults                      |
+| `-DisableEnterpiseApplicationUserConsent` | Disable enterprise application user consent    |
 | `-DisableUsersToCreateAppRegistrations`   | Disable user to create app registrations       |
 | `-DisableUsersToReadOtherUsers`           | Disable user to read other users               |
 | `-DisableUsersToCreateSecurityGroups`     | Disable users to create security groups        |
+| `-DisableUsersToCreateUnifiedGroups`      | Disable users to create unified groups         |
 | `-EnableBlockMsolPowerShell`              | Disable legacy MsolPowerShell access           |
 
 ### SharePoint Online
