@@ -16,6 +16,7 @@
   - Allowed  to create unified groups (Microsoft 365 groups): show, disable
   - Allowed to read other users: show, disable
   - BlockMsolPowerShell: show, enable
+- Device join settings: show
 - Licenses: show
 - Admin role assignments: show
 - User mfa status: show
@@ -161,7 +162,6 @@ Update-Module -Name DnsClient-PS -Scope AllUsers #Only on Mac and Linux required
 - Manage Self-service password reset (no API available)
 - Manage Authentication methods available for users / Manage migration till Jan 24 <https://learn.microsoft.com/en-us/azure/active-directory/authentication/how-to-authentication-methods-manage>
 - Enable enterpise state roaming (no API available)
-- Manage users allowed to join devices to aad <https://learn.microsoft.com/en-us/graph/api/deviceregistrationpolicy-get?view=graph-rest-beta&tabs=powershell>
 - Create default Conditinal Access polices
 - Find external e-mail forwardings
 - Restrict non-admin users from creating tenants (Only in Graph API Beta)

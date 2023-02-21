@@ -33,7 +33,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.12.0"
+$Version = "2.13.0"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -384,6 +384,20 @@ function disableUsersToCreateUnifiedGroups {
     }
     if ($GroupSettingsUnified = getGroupSettingsUnified) { Invoke-MgGraphRequest -Method PATCH -Uri "https://graph.microsoft.com/v1.0/groupSettings/$($GroupSettingsUnified.id)" -Body $Body }
     else { Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/groupSettings" -Body $Body }
+}
+
+<# Device join settings#>
+function checkDeviceJoinSettingsReport {
+    Write-Host "Checking device join settings"
+    $DeviceSettings = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy?$select=azureAdJoin,userDeviceQuota,multiFactorAuthConfiguration"
+    $Report = $DeviceSettings | Select-Object -Property @{Name = "Require MFA"; Expression = { if ($_.multiFactorAuthConfiguration -eq 1) { return $true } return $false } },
+    @{Name = "Allowed to join"; Expression = { if ($_.azureAdJoin.appliesTo -eq 1) { return "All users" } if ($_.azureAdJoin.appliesTo -eq 2) { return "Selected users" } return "No users" } },
+    @{Name = "Users"; Expression = { $Users = @() ; foreach ($UserId in $_.azureAdJoin.allowedUsers) { $Users += (Get-MgUser -UserId $UserId -Property UserPrincipalName).UserPrincipalName } return $Users -join "; " } },
+    @{Name = "Groups"; Expression = { $Groups = @() ; foreach ($GroupId in $_.azureAdJoin.allowedGroups) { $Groups += (Get-MgGroup -GroupId $GroupId -Property DisplayName).DisplayName } return $Groups -join "; " } },
+    userDeviceQuota | ConvertTo-Html -As List -Fragment -PreContent "<br><h3 id='AAD_DEVICE_JOIN_SETTINGS'>Device join settings</h3>"
+    $Report = $Report -Replace "<td>Require MFA:</td><td>False</td>", "<td>Require MFA:</td><td class='red'>False</td>"
+    $Report = $Report -Replace "<td>Allowed to join:</td><td>All users</td>", "<td>Allowed to join:</td><td class='red'>All users</td>"
+    return $Report
 }
 
 <# License SKU section#>
@@ -1046,6 +1060,7 @@ $AADToc = @"
 <h3 class='TOC'><a href="#AAD">Azure Active Directory</a></h3>
 <ul>
     <li><a href="#AAD_USER_SETTINGS">Tenant user settings</a></li>
+    <li><a href="#AAD_DEVICE_JOIN_SETTINGS">Device join settings</a></li>
     <li><a href="#AAD_SKU">Licenses</a></li>
     <li><a href="#AAD_ADMINS">Admin role assignments</a></li>
     <li><a href="#AAD_BG">BreakGlass account</a></li>
@@ -1099,6 +1114,7 @@ $Report += $Toc
 $Report += "<br><hr><h2 id='AAD'>Azure Active Directory</h2>"
 Write-Host "Azure Active Directory"
 $Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent -DisableUsersToCreateAppRegistrations $script:DisableUsersToCreateAppRegistrations -DisableUsersToReadOtherUsers $script:DisableUsersToReadOtherUsers -DisableUsersToCreateSecurityGroups $script:DisableUsersToCreateSecurityGroups -DisableUsersToCreateUnifiedGroups $script:DisableUsersToCreateUnifiedGroups -EnableBlockMsolPowerShell $script:EnableBlockMsolPowerShell
+$Report += checkDeviceJoinSettingsReport
 $Report += checkUsedSKUReport
 $Report += checkAdminRoleReport
 $Report += checkBreakGlassAccountReport -Create $script:CreateBreakGlassAccount
