@@ -2,7 +2,7 @@
 
 ## Azure Active Directory
 
-- [AzureAdDeployer](./AzureAdDeployer/README.md)
+- [AzureAdDeployer](https://github.com/swissbuechi/AzureAdDeployer)
 
 ## Actice Directory
 
