@@ -32,7 +32,7 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.11.2"
+$Version = "2.11.3"
 $VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
@@ -735,7 +735,7 @@ function checkSecurityDefaultsReport {
     return "<br><h3 id='AAD_SEC_DEFAULTS'>Security Defaults</h3><p>Disabled</p>"
 }
 function checkSecurityDefaults {
-    Write-Host "Checking Security Defaults"
+    Write-Host "Checking security defaults"
     return (Get-MgPolicyIdentitySecurityDefaultEnforcementPolicy -Property "isEnabled").IsEnabled
 }
 function updateSecurityDefaults {
@@ -749,7 +749,7 @@ function updateSecurityDefaults {
 
 <# Conditional Access section #>
 function checkConditionalAccessPolicyReport {
-    Write-Host "Checking Conditional Access policies"
+    Write-Host "Checking conditional access policies"
     if ($Policy = Get-MgIdentityConditionalAccessPolicy -Property Id, DisplayName, State) {
         return $Policy | ConvertTo-HTML -Property DisplayName, Id, State -As Table -Fragment -PreContent "<br><h3 id='AAD_CA'>Conditional Access policies</h3>"
     }
@@ -772,7 +772,7 @@ function checkNamedLocationReport {
 
 <# Application protection polices section#>
 function checkAppProtectionPolicesReport {
-    Write-Host "Checking App protection policies"
+    Write-Host "Checking app protection policies"
     if ($Polices = getAppProtectionPolices) {
         return $Polices | ConvertTo-HTML -As Table -Property DisplayName, IsAssigned -Fragment -PreContent "<br><h3 id='AAD_APP_POLICY'>App protection policies</h3>"
     }
@@ -792,7 +792,7 @@ function checkSpoTenantReport {
     param(
         [System.Boolean]$DisableAddToOneDrive
     )
-    Write-Host "Checking SharePoint Online tenant"
+    Write-Host "Checking tenant settings"
     if ($DisableAddToOneDrive) {
         Write-Host "Disable add to OneDrive button"
         Set-PnPTenant -DisableAddToOneDrive $True
@@ -1094,6 +1094,7 @@ $Report = @()
 $Report += organizationReport
 $Report += $Toc
 $Report += "<br><hr><h2 id='AAD'>Azure Active Directory</h2>"
+Write-Host "Azure Active Directory"
 $Report += checkTenanUserSettingsReport -DisableUserConsent $script:DisableEnterpiseApplicationUserConsent -DisableUsersToCreateAppRegistrations $script:DisableUsersToCreateAppRegistrations -DisableUsersToReadOtherUsers $script:DisableUsersToReadOtherUsers -DisableUsersToCreateSecurityGroups $script:DisableUsersToCreateSecurityGroups -EnableBlockMsolPowerShell $script:EnableBlockMsolPowerShell
 $Report += checkUsedSKUReport
 $Report += checkAdminRoleReport
@@ -1107,10 +1108,12 @@ $Report += checkAppProtectionPolicesReport
 
 if ($script:AddSharePointOnlineReport -or $script:DisableAddToOneDrive) {
     $Report += "<br><hr><h2 id='SPO'>SharePoint Online</h2>"
+    Write-Host "SharePoint Online"
     $Report += checkSpoTenantReport -DisableAddToOneDrive $script:DisableAddToOneDrive
 }
 if ($script:AddExchangeOnlineReport -or $script:SetMailboxLanguage -or $script:DisableSharedMailboxLogin -or $script:EnableSharedMailboxCopyToSent -or $script:HideUnifiedMailboxFromOutlookClient) {
     $Report += "<br><hr><h2 id='EXO'>Exchange Online</h2>"
+    Write-Host "Exchange Online"
     $Report += checkMailDomainReport
     $Report += checkMailConnectorReport
     $Report += checkMailboxReport -Language $script:SetMailboxLanguage
