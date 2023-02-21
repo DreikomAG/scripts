@@ -34,8 +34,8 @@ Param(
     [switch]$DisableAddToOneDrive
 )
 $ReportTitle = "Microsoft 365 Security Report"
-$Version = "2.15.0"
-$VersionMessage = "AzureAdDeployer version: $($Version)"
+$Version = "2.15.1"
+$script:VersionMessage = "AzureAdDeployer version: $($Version)"
 
 $ReportImageUrl = "https://cdn-icons-png.flaticon.com/512/3540/3540926.png"
 $LogoImageUrl = "https://dreikom.ch/typo3conf/ext/eag_website/Resources/Public/Images/dreikom_logo.svg"
@@ -73,14 +73,13 @@ $script:DisableAddToOneDrive = $DisableAddToOneDrive
 $script:AddExchangeOnlineReport = $AddExchangeOnlineReport
 $script:AddSharePointOnlineReport = $AddSharePointOnlineReport
 
-Write-Host $VersionMessage
-
 <# Interactive inputs section #>
 function CheckInteractiveMode {
     Param(
         $Parameters
     )
     if ($Parameters.Count) {
+        Write-Host $script:VersionMessage
         return
     }
     $script:InteractiveMode = $true
@@ -93,13 +92,17 @@ function InteractiveMenu {
 function mainMenu {
     $StartOptionValue = 0
     while (($result -ne $StartOptionValue) -or ($result -ne 1)) {
+        Clear-Host
         $Status = @"
-
+$($script:VersionMessage)
 Main menu:
+
 S: Start
 C: Configure options
+
 1: Add SharePoint Online report: $($script:AddSharePointOnlineReport)
 2: Add Exchange Online report: $($script:AddExchangeOnlineReport)
+
 "@
         $StartOption = New-Object System.Management.Automation.Host.ChoiceDescription "&START", "Start"
         $ConfigureOption = New-Object System.Management.Automation.Host.ChoiceDescription "&CONFIGURE", "Add SharePoint Online report"
@@ -118,14 +121,17 @@ C: Configure options
 }
 function configMenu {
     $StartOptionValue = 0
-    
+    Clear-Host
     $Status = @"
-
+$($script:VersionMessage)
 Configure menu:
+
 1: Azure Active Directory
 2: SharePoint Online
 3: Exchange Online
+
 B: Back to main menu
+
 "@
     $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
     $AADOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1 AAD", "Azure Active Directory options"
@@ -144,9 +150,11 @@ B: Back to main menu
 function AADMenu {
     $StartOptionValue = 0
     while ($result -ne $StartOptionValue) {
+        Clear-Host
         $Status = @"
-
+$($script:VersionMessage)
 Azure Active Directory options:
+
 1: Create BreakGlass account: $($script:CreateBreakGlassAccount)
 2: Enable security defaults: $($script:EnableSecurityDefaults)
 3: Disable security defaults: $($script:DisableSecurityDefaults)
@@ -157,7 +165,9 @@ Azure Active Directory options:
 8: Disable users to create unified groups: $($script:DisableUsersToCreateUnifiedGroups)
 9: Create UnifiedGroupCreationAllowed group: $($script:CreateUnifiedGroupCreationAllowedGroup)
 0: Disable legacy MsolPowerShell access: $($script:EnableBlockMsolPowerShell)
+
 B: Back to main menu
+
 "@
         $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
         $CreateBreakGlassAccountOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1", "Create BreakGlass account"
@@ -192,11 +202,15 @@ B: Back to main menu
 function SPOMenu {
     $StartOptionValue = 0
     while ($result -ne $StartOptionValue) {
+        Clear-Host
         $Status = @"
-
+$($script:VersionMessage)
 SharePoint Online options:
+
 1: Disable add to OneDrive button: $($script:DisableAddToOneDrive)
+
 B: Back to main menu
+
 "@
         $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
         $DisableAddToOneDriveOption = New-Object System.Management.Automation.Host.ChoiceDescription "&1}", "Disable add to OneDrive button"
@@ -212,13 +226,16 @@ B: Back to main menu
 function EXOMenu {
     $StartOptionValue = 0
     while ($result -ne $StartOptionValue) {
+        Clear-Host
         $Status = @"
-
+$($script:VersionMessage)
 Exchange Online options:
+
 1: Set mailbox language: $($script:SetMailboxLanguage)
 2: Disable shared mailbox login: $($script:DisableSharedMailboxLogin)
 3: Enable shared mailbox copy to sent: $($script:EnableSharedMailboxCopyToSent)
 4: Hide unified mailbox from outlook client: $($script:HideUnifiedMailboxFromOutlookClient)
+
 B: Back to main menu
 "@
         $BackOption = New-Object System.Management.Automation.Host.ChoiceDescription "&BACK", "Back to main menu"
@@ -1291,7 +1308,7 @@ $Desktop = [Environment]::GetFolderPath("Desktop")
 $ReportTitleHtml = "<h1>" + $ReportTitle + "</h1>"
 $ReportName = ("Microsoft365-Report-$($script:CustomerName).html").Replace(" ", "")
 $PostContentHtml = @"
-<p id='FootNote'>$($VersionMessage)</p>
+<p id='FootNote'>$($script:VersionMessage)</p>
 <p id='FootNote'>Creation date: $(Get-Date -Format "dd.MM.yyyy HH:mm")</p>
 <img src="$($LogoImageUrl)" width='75'>
 "@
@@ -1299,4 +1316,4 @@ Write-Host "Generating HTML report:" $ReportName
 $Report = ConvertTo-HTML -Body "$ReportTitleHtml $Report" -Title $ReportTitle -Head $Header -PostContent $PostContentHtml
 $Report | Out-File $Desktop\$ReportName
 Invoke-Item $Desktop\$ReportName
-if ($script:InteractiveMode -and $script:CreateBreakGlassAccount) { Read-Host "Click [ENTER] key to exit AzureAdDeployer" }
+if ($script:InteractiveMode) { Read-Host "Click [ENTER] key to exit AzureAdDeployer" }
