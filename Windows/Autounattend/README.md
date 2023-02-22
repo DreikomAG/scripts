@@ -4,7 +4,7 @@
 
 - Copy all files from [Autounattend](./) folder to the Windows installation USB stick root folder
 
-- Edit the [wifi.txt](./wifi.txt) file and replaye `<ssid>` and `<psk>` with your own values
+- Edit the [wifi.txt](./wifi.txt) file and replace `<ssid>` and `<psk>` with your own values
 
     Example `wifi.txt`
 
