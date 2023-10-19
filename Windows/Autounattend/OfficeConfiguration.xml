@@ -1,0 +1,8 @@
+<Configuration>
+  <Add OfficeClientEdition="64" Channel="Broad">
+    <Product ID="O365ProPlusRetail">
+      <Language ID="de-de" />
+    </Product>
+  </Add>
+  <Display Level="None" AcceptEULA="TRUE" />
+</Configuration>

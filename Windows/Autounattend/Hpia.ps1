@@ -1,4 +1,4 @@
-$Version = "5.1.7"
+$Version = "5.1.11"
 $Exe = "hp-hpia-$Version.exe"
 $ExePath = "C:\Temp\$Exe"
 

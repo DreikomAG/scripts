@@ -9,7 +9,11 @@ $WlanConfig = ".\wifi.txt"
 Write-Host "Waiting 180s for stable WLAN connection"
 .\TestConnection.ps1 -Script "Start-Sleep -Seconds 180" # Wait for WLAN
 
+.\WindowsDefaultAppsCleanup.ps1 #Clean Default Windows Apps
+
 .\TestConnection.ps1 -Script .\Chocolatey.ps1 #Install Choco and Adobe Reader
+
+.\TestConnection.ps1 -Scipt .\Office.ps1 #Install Office 365
 
 if (.\CheckHP.ps1) { .\TestConnection.ps1 -Script .\Hpia.ps1 } #Install HPIA and update drivers
 .\TestConnection.ps1 -Script .\WindowsUpdates.ps1 #Install Windows Updates and reboot
