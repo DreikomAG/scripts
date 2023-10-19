@@ -37,6 +37,10 @@ HPIA: `C:\Hpia\HPIAReport`
 
 - Install Chocolatey
 
+- Cleanup Windows Default Apps
+
+- Install Office
+
 - Install Adobe Reader: `choco install adobereader -y`
 
 - Install Chocolatey auto upgrades at startup: `choco install choco-upgrade-all-at-startup -y`
