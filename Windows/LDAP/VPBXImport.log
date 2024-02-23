@@ -1,0 +1,132 @@
+﻿**********************
+nStart der Windows PowerShell-Aufzeichnung
+Startzeit: 20240222173530
+Benutzername: DREIKOM\henrique.medeiros
+RunAs-Benutzer: DREIKOM\henrique.medeiros
+Konfigurationsname: 
+Computer: DK-NB15-HME (Microsoft Windows NT 10.0.22621.0)
+Hostanwendung: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command Import-Module 'c:\Users\henrique.medeiros\.vscode\extensions\ms-vscode.powershell-2024.0.0\modules\PowerShellEditorServices\PowerShellEditorServices.psd1'; Start-EditorServices -HostName 'Visual Studio Code Host' -HostProfileId 'Microsoft.VSCode' -HostVersion '2024.0.0' -AdditionalModules @('PowerShellEditorServices.VSCode') -BundledModulesPath 'c:\Users\henrique.medeiros\.vscode\extensions\ms-vscode.powershell-2024.0.0\modules' -EnableConsoleRepl -StartupBanner "PowerShell Extension v2024.0.0
+Copyright (c) Microsoft Corporation.
+
+https://aka.ms/vscode-powershell
+Type 'help' to get help.
+" -LogLevel 'Normal' -LogPath 'c:\Users\henrique.medeiros\AppData\Roaming\Code\User\globalStorage\ms-vscode.powershell\logs\1708618220-ee2ea4e8-55ce-4894-a8c0-d555c2a130c71708618215742\EditorServices.log' -SessionDetailsPath 'c:\Users\henrique.medeiros\AppData\Roaming\Code\User\globalStorage\ms-vscode.powershell\sessions\PSES-VSCode-46992-332192.json' -FeatureFlags @() 
+Prozess-ID: 30724
+PSVersion: 5.1.22621.2506
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.22621.2506
+BuildVersion: 10.0.22621.2506
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Die Aufzeichnung wurde gestartet. Die Ausgabedatei ist ".\VPBXImport.log".
+PS>TerminatingError(): "Die Pipeline wurde beendet."
+>> TerminatingError(): "Die Pipeline wurde beendet."
+>> TerminatingError(): "Die Pipeline wurde beendet."
+]633;E;.\x5cimportvpbx.ps1;]633;D;1]633;A]633;P;Cwd=C:\x5cGit\x5cscripts\x5cWindows\x5cLDAPPS C:\Git\scripts\Windows\LDAP> ]633;B
+]633;E]633;D]633;A]633;P;Cwd=C:\x5cGit\x5cscripts\x5cWindows\x5cLDAPPS C:\Git\scripts\Windows\LDAP> ]633;B
+PS>.\importvpbx.ps1
+Die Aufzeichnung wurde gestartet. Die Ausgabedatei ist ".\Importlogs.log".
+
+Die Aufzeichnung wurde beendet. Die Ausgabedatei ist "C:\Git\scripts\Windows\LDAP\Importlogs.log".
+]633;E;.\x5cimportvpbx.ps1;]633;D;0]633;A]633;P;Cwd=C:\x5cGit\x5cscripts\x5cWindows\x5cLDAPPS C:\Git\scripts\Windows\LDAP> ]633;B
+PS>CommandInvocation(Get-Command): "Get-Command"
+>> ParameterBinding(Get-Command): Name="ErrorAction"; Wert="Ignore"
+>> ParameterBinding(Get-Command): Name="Name"; Wert="Write-Host"
+
+CommandType     Name                                               Version    Source
+-----------     ----                                               -------    ------
+Cmdlet          Write-Host                                         3.1.0.0    Microsoft.PowerShell.Utility
+
+
+PS>CommandInvocation(Get-Command): "Get-Command"
+>> ParameterBinding(Get-Command): Name="ErrorAction"; Wert="Ignore"
+>> ParameterBinding(Get-Command): Name="Name"; Wert="Write-Debug"
+
+CommandType     Name                                               Version    Source
+-----------     ----                                               -------    ------
+Cmdlet          Write-Debug                                        3.1.0.0    Microsoft.PowerShell.Utility
+
+
+PS>CommandInvocation(Get-Help): "Get-Help"
+>> ParameterBinding(Get-Help): Name="Name"; Wert="Write-Debug"
+>> ParameterBinding(Get-Help): Name="Online"; Wert="False"
+>> ParameterBinding(Get-Help): Name="ErrorAction"; Wert="Ignore"
+
+NAME
+    Write-Debug
+
+SYNTAX
+    Write-Debug [-Message] <string>  [<CommonParameters>]
+
+
+ALIASE
+    Keine
+
+
+HINWEISE
+    Die Hilfedateien für dieses Cmdlet können von "Get-Help" auf diesem Computer nicht gefunden werden. Es wird nur ein Teil der Hilfe angezeigt.
+        -- Sie können die Hilfedateien für das Modul, das dieses Cmdlet enthält, herunterladen und installieren, indem Sie "Update-Help" verwenden.
+        -- Wenn Sie das Hilfethema für dieses Cmdlet online anzeigen möchten, geben Sie Folgendes ein: "Get-Help Write-Debug -Online", oder
+           gehen Sie zu "https://go.microsoft.com/fwlink/?LinkID=113424".
+
+
+
+PS>CommandInvocation(Get-Help): "Get-Help"
+>> ParameterBinding(Get-Help): Name="Name"; Wert="Write-Host"
+>> ParameterBinding(Get-Help): Name="Online"; Wert="False"
+>> ParameterBinding(Get-Help): Name="ErrorAction"; Wert="Ignore"
+
+NAME
+    Write-Host
+
+SYNTAX
+    Write-Host [[-Object] <Object>]  [<CommonParameters>]
+
+
+ALIASE
+    Keine
+
+
+HINWEISE
+    Die Hilfedateien für dieses Cmdlet können von "Get-Help" auf diesem Computer nicht gefunden werden. Es wird nur ein Teil der Hilfe angezeigt.
+        -- Sie können die Hilfedateien für das Modul, das dieses Cmdlet enthält, herunterladen und installieren, indem Sie "Update-Help" verwenden.
+        -- Wenn Sie das Hilfethema für dieses Cmdlet online anzeigen möchten, geben Sie Folgendes ein: "Get-Help Write-Host -Online", oder
+           gehen Sie zu "https://go.microsoft.com/fwlink/?LinkID=113426".
+
+
+
+PS>.\importvpbx.ps1
+Die Aufzeichnung wurde gestartet. Die Ausgabedatei ist ".\Importlogs.log".
+CSV-Datei mit UTF-8 Codierung gespeichert
+PHP-Skript ausgefÃ¼hrt
+
+Adressbuch erfolgreich importiert
+Die Aufzeichnung wurde beendet. Die Ausgabedatei ist "C:\Git\scripts\Windows\LDAP\Importlogs.log".
+]633;E;.\x5cimportvpbx.ps1;]633;D;0]633;A]633;P;Cwd=C:\x5cGit\x5cscripts\x5cWindows\x5cLDAPPS C:\Git\scripts\Windows\LDAP> ]633;B
+PS>.\importvpbx.ps1
+Die Aufzeichnung wurde gestartet. Die Ausgabedatei ist ".\Importlogs.log".
+CSV-Datei mit UTF-8 Codierung gespeichert
+PHP-Skript ausgefuehrt
+
+Adressbuch erfolgreich importiert
+Die Aufzeichnung wurde beendet. Die Ausgabedatei ist "C:\Git\scripts\Windows\LDAP\Importlogs.log".
+]633;E;.\x5cimportvpbx.ps1;]633;D;0]633;A]633;P;Cwd=C:\x5cGit\x5cscripts\x5cWindows\x5cLDAPPS C:\Git\scripts\Windows\LDAP> ]633;B
+PS>.\importvpbx.ps1
+Die Aufzeichnung wurde gestartet. Die Ausgabedatei ist ".\Importlogs.log".
+CSV-Datei mit UTF-8 Codierung gespeichert
+PHP-Skript ausgefuehrt
+
+Adressbuch erfolgreich importiert
+Die Aufzeichnung wurde beendet. Die Ausgabedatei ist "C:\Git\scripts\Windows\LDAP\Importlogs.log".
+]633;E;.\x5cimportvpbx.ps1;]633;D;0]633;A]633;P;Cwd=C:\x5cGit\x5cscripts\x5cWindows\x5cLDAPPS C:\Git\scripts\Windows\LDAP> ]633;B
+PS>.\importvpbx.ps1
+Die Aufzeichnung wurde gestartet. Die Ausgabedatei ist ".\Importlogs.log".
+CSV-Datei mit UTF-8 Codierung gespeichert
+PHP-Skript ausgefuehrt
+
+Adressbuch erfolgreich importiert
+Die Aufzeichnung wurde beendet. Die Ausgabedatei ist "C:\Git\scripts\Windows\LDAP\Importlogs.log".
+]633;E;.\x5cimportvpbx.ps1;]633;D;0]633;A]633;P;Cwd=C:\x5cGit\x5cscripts\x5cWindows\x5cLDAPPS C:\Git\scripts\Windows\LDAP> ]633;B

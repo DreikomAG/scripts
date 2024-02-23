@@ -1,0 +1,5 @@
+LDAPServer=
+LDAPPort=
+LdapUser=
+LdapPassword=
+LDAPBaseDN=
