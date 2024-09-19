@@ -1,0 +1,2 @@
+folderPath=
+Kundenname=

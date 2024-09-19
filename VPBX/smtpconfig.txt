@@ -1,0 +1,4 @@
+smtpServer=
+Absender=
+Empfänger=	
+Betreff=
