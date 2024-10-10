@@ -1,0 +1,27 @@
+﻿**********************
+nStart der Windows PowerShell-Aufzeichnung
+Startzeit: 20241008000241
+Benutzername: DREIKOM\henrique.medeiros
+RunAs-Benutzer: DREIKOM\henrique.medeiros
+Konfigurationsname: 
+Computer: DK-NB04-HME (Microsoft Windows NT 10.0.22631.0)
+Hostanwendung: C:\Windows\System32\WindowsPowerShell\v1.0\powershell_ise.exe
+Prozess-ID: 18044
+PSVersion: 5.1.22621.4111
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.22621.4111
+BuildVersion: 10.0.22621.4111
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Die Aufzeichnung wurde gestartet. Die Ausgabedatei ist ".\Importlogs.log".
+CSV-Datei mit UTF-8 Codierung gespeichert
+PS>TerminatingError(Start-Process): "Dieser Befehl kann nicht vollständig ausgeführt werden, da das System nicht alle erforderlichen Informationen finden kann."
+Fehler beim Abrufen der LDAP-Daten: Dieser Befehl kann nicht vollständig ausgeführt werden, da das System nicht alle erforderlichen Informationen finden kann.
+E-Mail mit Fehlermeldungen gesendet
+**********************
+Ende der Windows PowerShell-Aufzeichnung
+Endzeit: 20241008000249
+**********************

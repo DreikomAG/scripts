@@ -1,2 +1,0 @@
-folderPath=
-Kundenname=

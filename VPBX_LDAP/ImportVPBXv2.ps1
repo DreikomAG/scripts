@@ -1,22 +1,26 @@
-#Pfad zur KonfigurationsOrdner
+# Ändere in das Verzeichnis des aktuellen Skripts
+Set-Location $PSScriptRoot
+
+# Pfad zur Konfigurationsdatei (die sich im selben Ordner wie das Skript befindet)
 $ConfigPath = ".\config.txt"
+
+# Konfiguration aus der Datei laden
 $Config = Get-Content $ConfigPath | ConvertFrom-StringData
-$folderPath = ".\"
 $clientname = $Config.Kundenname
 
-# Protokollierung starten
-Start-Transcript -Path "$folderPath\Importlogs.log"
+# Protokollierung starten (legt die Datei im Skript-Verzeichnis ab)
+Start-Transcript -Path ".\Importlogs.log"
 
-# Pfad zur Konfigurationsdatei
-$ldapConfigPath = "$folderPath\ldapconfig.txt"
-$vpbxConfigPath = "$folderPath\vpbxconfig.txt"
-$smtpConfigPath = "$folderPath\smtpconfig.txt"
+# Pfad zu weiteren Konfigurationsdateien
+$ldapConfigPath = ".\ldapconfig.txt"
+$vpbxConfigPath = ".\vpbxconfig.txt"
+$smtpConfigPath = ".\smtpconfig.txt"
 
 # Pfad zur Ausgabedatei (UTF-8-kodierte CSV-Datei)
-$outputFilePath = "$folderPath\slapd.csv"
+$outputFilePath = ".\slapd.csv"
 
 try {
-    # Konfigurationsdaten aus der Datei lesen
+    # Konfigurationsdaten aus den Dateien lesen
     $ldapConfig = Get-Content $ldapConfigPath | ConvertFrom-StringData
     $vpbxConfig = Get-Content $vpbxConfigPath | ConvertFrom-StringData
     $smtpConfig = Get-Content $smtpConfigPath | ConvertFrom-StringData
@@ -28,14 +32,14 @@ try {
     $subject = $smtpConfig.Betreff
     $body = ""  
 
-    # LDAP-Verbindungsinformationen aus der Konfiguration holen
+    # LDAP-Verbindungsinformationen
     $LDAPServer = $ldapConfig.LDAPServer
     $LDAPPort = $ldapConfig.LDAPPort
     $LdapUser = $ldapConfig.LdapUser
     $LdapPassword = $ldapConfig.LdapPassword
     $LDAPBaseDN = $ldapConfig.LDAPBaseDN
 
-    # VPBX-Verbindungsinformationen aus der Konfiguration holen
+    # VPBX-Verbindungsinformationen
     $UrlVPBX = $vpbxConfig.URL
     $ApiUserVPBX = $vpbxConfig.username 
     $ApiPasswordVPBX = $vpbxConfig.password
@@ -43,11 +47,12 @@ try {
     # LDAP-Suchparameter
     $searchParameters = "(objectClass=*)"
 
-    # LDAP-Daten mit ldapsearch abrufen und in CSV-Datei schreiben
+    # Vorhandene CSV-Datei löschen, falls vorhanden
     if (Test-Path $outputFilePath) {
         Remove-Item $outputFilePath -Force
     }
 
+    # LDAP-Daten abrufen und in CSV-Datei schreiben
     $directorySearcher = New-Object DirectoryServices.DirectorySearcher
     $directorySearcher.SearchRoot = New-Object DirectoryServices.DirectoryEntry("LDAP://${LDAPServer}:${LDAPPort}/$LDAPBaseDN", $LdapUser, $LdapPassword, "None")
     $directorySearcher.Filter = $searchParameters
@@ -57,7 +62,7 @@ try {
     $searchResult = $directorySearcher.FindAll()
 
     if ($searchResult.Count -gt 0) {
-        # LDAP-Daten in CSV-Datei schreiben
+        # LDAP-Daten in CSV-Datei formatieren und schreiben
         $csvContent = foreach ($entry in $searchResult) {
             if ($entry.Properties) {
                 $givenName = $entry.Properties["givenName"] -join ";"
@@ -67,7 +72,7 @@ try {
                 $telephoneNumber = $entry.Properties["telephoneNumber"] -join ";"
                 $mobile = $entry.Properties["mobile"] -join ";"
 
-                # Format anpassen
+                # Objekt für CSV-Ausgabe
                 [PSCustomObject]@{
                     GivenName       = $givenName
                     SN              = $sn
@@ -78,32 +83,35 @@ try {
                 }
             }
         }
-        # CSV-Datei schreiben
+
+        # CSV-Datei erstellen
         $csvContent | Export-Csv -Path $outputFilePath -Encoding UTF8 -NoTypeInformation -Delimiter ";"
         Write-Host "CSV-Datei mit UTF-8 Codierung gespeichert"
 
-        # PHP-Skript mit dem PHP-Interpreter ausführen
-        Start-Process -FilePath '$folderPath\php_script.php' -Wait
-        Write-Host "PHP-Skript ausgefuehrt"
+        # PHP-Skript ausführen
+        Start-Process -FilePath '.\php_script.php' -Wait
+        Write-Host "PHP-Skript ausgeführt"
 
         # Adressbuch importieren
         $ImportPBX = "https://$UrlVPBX/import.php?u=$ApiUserVPBX&p=$ApiPasswordVPBX"
         curl.exe -F "upload_file=@$outputFilePath" $ImportPBX
         Write-Host "Adressbuch erfolgreich importiert"
+
+        # CSV-Datei löschen
         Remove-Item $outputFilePath
         Write-Host "CSV-Datei gelöscht"
     } else {
         Write-Host "Keine Ergebnisse gefunden."
     }
 } catch {
-# Fehlerbehandlung und E-Mail senden
-Write-Host "Fehler beim Abrufen der LDAP-Daten: $_"
-if ($_.Exception.InnerException) {
-    Write-Host "Inner Exception: $($_.Exception.InnerException.Message)"
-}
+    # Fehlerbehandlung und E-Mail senden
+    Write-Host "Fehler beim Abrufen der LDAP-Daten: $_"
+    if ($_.Exception.InnerException) {
+        Write-Host "Inner Exception: $($_.Exception.InnerException.Message)"
+    }
 
-# E-Mail-Körper mit Fehlermeldung
-$body = @"
+    # E-Mail-Körper mit Fehlermeldung
+    $body = @"
 Es gab einen Fehler beim Skript:
 Fehlermeldung: $($_.Exception.Message)
 
@@ -113,9 +121,9 @@ Kunde: $clientname
 URL: $UrlVPBX
 "@
 
-# E-Mail senden
-Send-MailMessage -SmtpServer $smtpServer -Port 25 -From $smtpFrom -To $smtpTo -Subject $subject -Body $body
-Write-Host "E-Mail mit Fehlermeldungen gesendet"
+    # E-Mail senden
+    Send-MailMessage -SmtpServer $smtpServer -Port 25 -From $smtpFrom -To $smtpTo -Subject $subject -Body $body
+    Write-Host "E-Mail mit Fehlermeldungen gesendet"
 }
 
 # Protokollierung stoppen
