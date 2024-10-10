@@ -4,14 +4,12 @@
 
 - Copy all files from folder to the Desktop
 
-- Edit the [install.cmd](./install.cmd) file and replace -pbxserver `<.vpbx.globalcall.ch>` and -modus `1/2/3/4` with your own values.
-# Modus: 1=CTI-Client,2=Flexclient, 3=Softphone, 4=flexcore
+- Edit the [install.cmd](./install.cmd) file and replace -pbxserver `".vpbx.globalcall.ch"` and -modus `"1/2/3/4"` with your own values.
+### Modus: 1=CTI-Client,2=Flexclient, 3=Softphone, 4=flexcore
 
-- Replace unter "PackageToken" your Token from Jabra XPRESS
+- Replace unter -PackageToken "" your Token from Jabra XPRESS
 
 - Edit [userliste.csv](./userliste.csv) with the SIP-Credentials
-
-# Modus: 1=CTI-Client,2=Flexclient, 3=Softphone, 4=flexcore
 
 ## Tasks
 
